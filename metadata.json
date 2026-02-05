@@ -1,0 +1,8 @@
+{
+  "name": "Tracker",
+  "description": "A comprehensive productivity app featuring tasks, habits, focus timer, calendar, and Eisenhower matrix views.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
