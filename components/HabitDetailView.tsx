@@ -20,6 +20,7 @@ interface HabitDetailViewProps {
   onToggleCheck: (dateStr: string) => void;
   onEdit: (habit: Habit) => void;
   onDelete: (habitId: string) => void;
+  onStartFocus?: () => void;
 }
 
 const EMOJIS = [
@@ -31,7 +32,7 @@ const EMOJIS = [
 ];
 
 const HabitDetailView: React.FC<HabitDetailViewProps> = ({ 
-    habit, onClose, onToggleCheck, onEdit, onDelete 
+    habit, onClose, onToggleCheck, onEdit, onDelete, onStartFocus
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showMenu, setShowMenu] = useState(false);
@@ -236,7 +237,7 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
                                     <button onClick={() => { setIsEditing(true); setShowMenu(false); }} className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm font-medium text-slate-200 flex items-center gap-3">
                                         <Edit2 size={18} className="text-slate-400" /> Edit
                                     </button>
-                                    <button onClick={() => { setShowMenu(false); }} className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm font-medium text-slate-200 flex items-center gap-3">
+                                    <button onClick={() => { if(onStartFocus) onStartFocus(); setShowMenu(false); onClose(); }} className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm font-medium text-slate-200 flex items-center gap-3">
                                         <Clock size={18} className="text-slate-400" /> Start Focus
                                     </button>
                                     <button onClick={() => { setShowShareModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-3 hover:bg-white/10 text-sm font-medium text-slate-200 flex items-center gap-3">

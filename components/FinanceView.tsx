@@ -142,7 +142,7 @@ const getNextRenewal = (start: string | Date, period: 'Monthly' | 'Yearly') => {
 };
 
 const FinanceView: React.FC<FinanceViewProps> = ({ 
-    transactions, onAddTransaction, onUpdateTransaction, onDeleteTransaction, onMenuClick, onAddTransactions,
+    transactions = [], onAddTransaction, onUpdateTransaction, onDeleteTransaction, onMenuClick, onAddTransactions,
     debtors = [], debts = [], onAddDebtor, onDeleteDebtor, onUpdateDebtor,
     onAddDebt, onUpdateDebt, onDeleteDebt,
     goals = [], onAddGoal, onUpdateGoal, onDeleteGoal,
@@ -318,21 +318,15 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
   // --- Workspace Data Logic ---
   
-  const combinedTransactions = useMemo(() => {
-      // In joint mode, we merge both arrays.
-      return [...transactions, ...partnerTransactions];
-  }, [transactions, partnerTransactions]);
-
   const activeTransactions = useMemo(() => {
       if (workspaceMode === 'joint') {
-          // In joint mode, show EVERYTHING from both users to give full picture?
-          // Or just shared? Usually couples want to see total household income/expense.
-          // Let's show ALL for full transparency if linked.
-          return combinedTransactions;
+          // If transactions or partnerTransactions are null/undefined, safe fallback
+          const local = transactions || [];
+          const partner = partnerTransactions || [];
+          return [...local, ...partner];
       }
-      // In personal mode, show only my transactions
-      return transactions;
-  }, [workspaceMode, transactions, combinedTransactions]);
+      return transactions || [];
+  }, [workspaceMode, transactions, partnerTransactions]);
 
   const allTransactionsSorted = useMemo(() => {
       return [...activeTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -396,6 +390,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
       // Only count shared expenses for split calculation
       monthTransactions.filter(t => t.type === 'debit' && t.isShared).forEach(t => {
+          // If I paid, or if paidBy is undefined but it exists in my local list
           if (t.paidBy === myUid || (!t.paidBy && transactions.some(mt => mt.id === t.id))) {
               myTotal += t.amount;
           } else {

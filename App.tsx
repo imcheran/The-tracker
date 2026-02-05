@@ -523,6 +523,26 @@ const App: React.FC = () => {
                         onDeleteHabit={(id) => setHabits(prev => prev.map(h => h.id === id ? { ...h, isArchived: true } : h))}
                         onMenuClick={() => setIsSidebarOpen(true)}
                         onOpenStats={() => setCurrentView(ViewType.HabitStats)}
+                        onStartFocus={(habitId) => {
+                            const habit = habits.find(h => h.id === habitId);
+                            // Create a temporary task for the focus session based on the habit
+                            const tempTask: Task = {
+                                id: `habit-${habitId}`,
+                                title: habit?.name || "Habit Focus",
+                                isCompleted: false,
+                                priority: 0,
+                                listId: 'focus',
+                                tags: ['Habit'],
+                                subtasks: [],
+                                attachments: [],
+                                createdAt: new Date()
+                            };
+                            if (!tasks.find(t => t.id === tempTask.id)) {
+                                setTasks(prev => [...prev, tempTask]);
+                            }
+                            setFocusTaskId(tempTask.id);
+                            setCurrentView(ViewType.Focus);
+                        }}
                         user={user}
                     />
                 )}
@@ -571,7 +591,7 @@ const App: React.FC = () => {
                         onAddDebt={(d) => setDebts([...debts, d])}
                         onUpdateDebt={(d) => setDebts(prev => prev.map(old => old.id === d.id ? d : old))}
                         onDeleteDebt={(id) => setDebts(prev => prev.filter(d => d.id !== id))}
-                        goals={workspaceMode === 'joint' && partnerGoals.length > 0 ? [...goals, ...partnerGoals] : goals}
+                        goals={settings.couples?.partnerId && partnerGoals.length > 0 ? [...goals, ...partnerGoals] : goals}
                         onAddGoal={(g) => setGoals([...goals, g])}
                         onUpdateGoal={(g) => setGoals(prev => prev.map(old => old.id === g.id ? g : old))}
                         onDeleteGoal={(id) => setGoals(prev => prev.filter(g => g.id !== id))}
