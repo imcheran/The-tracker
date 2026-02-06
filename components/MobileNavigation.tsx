@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Layers, Calendar, Clock, Menu } from 'lucide-react';
+import { Layers, Calendar, Clock, Menu, Wallet } from 'lucide-react';
 import { ViewType } from '../types';
 
 interface MobileNavigationProps {
@@ -11,46 +11,36 @@ interface MobileNavigationProps {
 
 export const MobileNavigation: React.FC<MobileNavigationProps> = React.memo(({ currentView, onChangeView, onMenuClick }) => {
   const navItems = [
-    { id: ViewType.Inbox, icon: Layers, label: 'Tasks' },
-    { id: ViewType.Calendar, icon: Calendar, label: 'Calendar' },
-    { id: ViewType.Focus, icon: Clock, label: 'Focus' },
+    { id: ViewType.Inbox, icon: Layers },
+    { id: ViewType.Calendar, icon: Calendar },
+    { id: ViewType.Focus, icon: Clock },
+    { id: ViewType.Finance, icon: Wallet },
   ];
 
   return (
-    <div 
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-30 pb-safe shadow-[0_-1px_3px_rgba(0,0,0,0.05)]"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0px)' }}
-    >
-      <div className="flex justify-between items-center h-14 px-4">
+    <div className="fixed bottom-6 left-6 right-6 z-50 flex justify-center pb-safe">
+      <div className="bg-white/90 backdrop-blur-lg rounded-full shadow-organic px-2 py-2 flex items-center justify-between w-full max-w-sm border border-white/50">
         {navItems.map((item) => {
-          const isActive = currentView === item.id || (item.id === ViewType.Inbox && (currentView === ViewType.All || currentView === ViewType.Today || currentView === ViewType.Next7Days));
+          const isActive = currentView === item.id || (item.id === ViewType.Inbox && (currentView === ViewType.All || currentView === ViewType.Today));
           return (
             <button
               key={item.id}
-              onClick={() => onChangeView(item.id)}
-              className="flex flex-col items-center justify-center min-w-[3.5rem] h-full gap-1 group relative"
+              onClick={() => onChangeView(item.id as ViewType)}
+              className={`
+                w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300
+                ${isActive ? 'bg-charcoal text-yellow-soft scale-110 shadow-lg' : 'text-charcoal/50 hover:bg-cream hover:text-charcoal'}
+              `}
             >
-              <div className={`
-                  p-1.5 rounded-xl transition-all duration-300
-                  ${isActive ? 'text-blue-600 dark:text-blue-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600'}
-              `}>
-                  <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              <span className={`text-[10px] font-bold transition-all ${isActive ? 'text-blue-600 dark:text-blue-400 scale-100' : 'text-slate-400 dark:text-slate-500 scale-90'}`}>
-                  {item.label}
-              </span>
+              <item.icon size={22} strokeWidth={2.5} />
             </button>
           );
         })}
         
         <button
           onClick={onMenuClick}
-          className="flex flex-col items-center justify-center min-w-[3.5rem] h-full gap-1 group"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-charcoal/50 hover:bg-cream hover:text-charcoal transition-all"
         >
-          <div className="p-1.5 rounded-xl text-slate-400 dark:text-slate-500 group-hover:text-slate-600 transition-all">
-              <Menu size={22} />
-          </div>
-          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 scale-90">Menu</span>
+          <Menu size={22} strokeWidth={2.5} />
         </button>
       </div>
     </div>
