@@ -52,8 +52,8 @@ const mergeArrays = <T extends { id: string; updatedAt?: Date | string }>(local:
 };
 
 const LoadingFallback: React.FC = () => (
-    <div className="flex-1 flex items-center justify-center bg-background-light dark:bg-background-dark h-full">
-        <Loader2 size={32} className="animate-spin text-primary-500" />
+    <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-950 h-full">
+        <Loader2 size={32} className="animate-spin text-blue-500" />
     </div>
 );
 
@@ -274,6 +274,7 @@ const App: React.FC = () => {
 
   // --- Partner Data Syncing ---
   useEffect(() => {
+      // Clean up previous subscription if partner ID changes or removed
       if (partnerSubscriptionRef.current) {
           partnerSubscriptionRef.current();
           partnerSubscriptionRef.current = null;
@@ -283,11 +284,16 @@ const App: React.FC = () => {
       
       if (partnerId) {
           console.log("Subscribing to partner data:", partnerId);
+          // Subscribe to partner's data stream
           const unsub = subscribeToDataChanges(partnerId, (data) => {
               if (data) {
+                  // We only care about finance data from the partner for now
                   if (data.transactions && Array.isArray(data.transactions)) {
+                      // Mark them as partner's implicitly by ID if needed, 
+                      // or just store them separately
                       const pTransactions = data.transactions.map((t: any) => ({
                           ...t,
+                          // Ensure we tag them if they haven't been tagged already (though paidBy should exist)
                           paidBy: t.paidBy || partnerId
                       }));
                       setPartnerTransactions(pTransactions);
@@ -306,7 +312,7 @@ const App: React.FC = () => {
       return () => {
           if (partnerSubscriptionRef.current) partnerSubscriptionRef.current();
       };
-  }, [settings.couples?.partnerId]);
+  }, [settings.couples?.partnerId]); // Re-run when partner ID changes
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(async (u) => {
@@ -352,6 +358,7 @@ const App: React.FC = () => {
 
       latestDataRef.current = currentData;
 
+      // Optimistic Update: Save to LocalStorage in the next tick to avoid blocking UI
       setTimeout(() => {
           saveToStorage(STORAGE_KEYS.TASKS, tasks);
           saveToStorage(STORAGE_KEYS.LISTS, lists);
@@ -374,7 +381,7 @@ const App: React.FC = () => {
           saveTimeoutRef.current = setTimeout(() => {
               saveUserDataToFirestore(user.uid, currentData);
               setSyncStatus('saved');
-          }, 2000);
+          }, 2000); // Debounce saves
       }
   }, [tasks, lists, habits, focusCategories, focusSessions, transactions, debtors, debts, goals, subscriptions, investments, settings, user, isAuthReady]);
 
@@ -424,7 +431,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
         <Sidebar 
             currentView={currentView}
             onChangeView={(view) => { setCurrentView(view); setIsSidebarOpen(false); }}
@@ -518,6 +525,7 @@ const App: React.FC = () => {
                         onOpenStats={() => setCurrentView(ViewType.HabitStats)}
                         onStartFocus={(habitId) => {
                             const habit = habits.find(h => h.id === habitId);
+                            // Create a temporary task for the focus session based on the habit
                             const tempTask: Task = {
                                 id: `habit-${habitId}`,
                                 title: habit?.name || "Habit Focus",

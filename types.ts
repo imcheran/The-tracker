@@ -106,13 +106,7 @@ export interface Habit {
   showWidget?: boolean; // New: Show as widget in Today view
   createdDate?: Date;
   updatedAt?: Date;
-  history: Record<string, { 
-      completed: boolean; 
-      status?: 'completed' | 'skipped' | 'failed'; // New: Support for Skipped/Sick days
-      timestamp: number; 
-      mood?: string; 
-      note?: string 
-  }>;
+  history: Record<string, { completed: boolean; timestamp: number; mood?: string; note?: string }>;
 }
 
 export type HabitLog = Habit['history'][string];

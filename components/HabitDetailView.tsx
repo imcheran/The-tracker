@@ -1,14 +1,15 @@
+
 import React, { useState, useMemo } from 'react';
 import { Habit, HabitLog } from '../types';
 import { 
   X, ChevronLeft, ChevronRight, MoreVertical, Edit2, Trash2, 
   Share2, CheckCircle2, Calendar as CalendarIcon, Activity, TrendingUp,
-  Frown, Meh, Smile, Heart, Check, Circle, Archive, Clock, MinusCircle, MessageSquare
+  Frown, Meh, Smile, Heart, Check, Circle, Archive, Clock
 } from 'lucide-react';
 import { 
   format, eachDayOfInterval, 
   isSameMonth, isSameDay, addMonths, subMonths, 
-  startOfMonth, endOfMonth, getDaysInMonth, isAfter, parseISO
+  startOfMonth, endOfMonth, getDaysInMonth, isAfter
 } from 'date-fns';
 import HabitFormSheet from './HabitFormSheet';
 import HabitShareModal from './HabitShareModal';
@@ -40,7 +41,7 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
   
   const [showLogModal, setShowLogModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [logStatus, setLogStatus] = useState<'achieved' | 'skipped' | 'unachieved'>('achieved');
+  const [logStatus, setLogStatus] = useState<'achieved' | 'unachieved'>('achieved');
   const [logMood, setLogMood] = useState<string | undefined>(undefined);
   const [logNote, setLogNote] = useState('');
 
@@ -62,15 +63,10 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
       let d = new Date();
       while (true) {
           const dStr = format(d, 'yyyy-MM-dd');
-          const log = habit.history[dStr];
-          if (log?.completed) {
+          if (habit.history[dStr]?.completed) {
               currentStreak++;
               d.setDate(d.getDate() - 1);
-          } else if (log?.status === 'skipped') {
-              // Skipped days don't break streak but don't add to it in standard logic,
-              // or they preserve it. Let's say they preserve it, so we just go back one day.
-              d.setDate(d.getDate() - 1);
-          } else if (isSameDay(d, today) && !log) {
+          } else if (isSameDay(d, today) && !habit.history[dStr]?.completed) {
               d.setDate(d.getDate() - 1);
           } else {
               break;
@@ -80,14 +76,6 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
       return { totalCheckIns, monthlyCheckIns, monthlyRate, currentStreak };
   }, [habit.history, currentMonth]);
 
-  const timelineEvents = useMemo(() => {
-      const historyEntries = Object.entries(habit.history) as [string, HabitLog][];
-      return historyEntries
-          .filter(([_, log]) => log.note || log.mood)
-          .sort(([a], [b]) => b.localeCompare(a))
-          .map(([date, log]) => ({ date, ...log }));
-  }, [habit.history]);
-
   const handleDateClick = (date: Date) => {
       if (isAfter(date, new Date())) return;
 
@@ -95,10 +83,7 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
       const existingLog = habit.history[dateStr];
 
       setSelectedDate(date);
-      if (existingLog?.completed) setLogStatus('achieved');
-      else if (existingLog?.status === 'skipped') setLogStatus('skipped');
-      else setLogStatus('unachieved');
-      
+      setLogStatus(existingLog?.completed ? 'achieved' : 'unachieved');
       setLogMood(existingLog?.mood);
       setLogNote(existingLog?.note || '');
       setShowLogModal(true);
@@ -111,21 +96,11 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
       if (logStatus === 'achieved') {
           newHistory[dateStr] = {
               completed: true,
-              status: 'completed',
-              timestamp: Date.now(),
-              mood: logMood,
-              note: logNote
-          };
-      } else if (logStatus === 'skipped') {
-          newHistory[dateStr] = {
-              completed: false,
-              status: 'skipped',
               timestamp: Date.now(),
               mood: logMood,
               note: logNote
           };
       } else {
-          // Unachieved = delete entry
           if (newHistory[dateStr]) delete newHistory[dateStr];
       }
 
@@ -158,9 +133,7 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
                   {padding.map((_, i) => <div key={`pad-${i}`} />)}
                   {days.map((day) => {
                       const dateStr = format(day, 'yyyy-MM-dd');
-                      const log = habit.history[dateStr];
-                      const isCompleted = log?.completed;
-                      const isSkipped = log?.status === 'skipped';
+                      const isCompleted = habit.history[dateStr]?.completed;
                       const isFuture = isAfter(day, new Date());
                       const isSelected = isSameDay(day, selectedDate) && showLogModal;
 
@@ -174,9 +147,7 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
                                       ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-[#1c1c1e]' : ''}
                                       ${isCompleted 
                                         ? 'bg-blue-600 text-white' 
-                                        : isSkipped 
-                                            ? 'bg-slate-700 text-slate-400' 
-                                            : 'text-slate-400 hover:bg-white/5'
+                                        : 'text-slate-400 hover:bg-white/5'
                                       }
                                       ${isFuture ? 'opacity-30 cursor-default' : ''}
                                   `}
@@ -289,33 +260,11 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
             <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-20">
                 {renderCalendar()}
                 {renderStats()}
-                
-                {/* Timeline Section */}
                 <div className="mb-8">
-                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><MessageSquare size={18}/> Habit Log</h3>
-                    {timelineEvents.length === 0 ? (
-                        <div className="bg-[#1c1c1e] rounded-2xl p-6 min-h-[100px] flex items-center justify-center">
-                            <p className="text-slate-500 text-sm text-center w-full">No check-in thoughts yet</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {timelineEvents.map((event, idx) => (
-                                <div key={idx} className="flex gap-4">
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                                        <div className="w-0.5 bg-[#2c2c2e] flex-1 my-1"></div>
-                                    </div>
-                                    <div className="flex-1 bg-[#1c1c1e] p-4 rounded-2xl border border-white/5">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="text-xs font-bold text-slate-400">{format(parseISO(event.date), 'MMM d, yyyy')}</span>
-                                            {event.mood && <span className="text-xl">{EMOJIS.find(e => e.id === event.mood)?.icon}</span>}
-                                        </div>
-                                        <p className="text-sm text-slate-200 whitespace-pre-wrap">{event.note}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <h3 className="text-lg font-bold text-white mb-4">Habit Log on {format(currentMonth, 'MMMM')}</h3>
+                    <div className="bg-[#1c1c1e] rounded-2xl p-6 min-h-[100px] flex items-center justify-center">
+                        <p className="text-slate-500 text-sm text-center w-full">No check-in thoughts to share this month yet</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -334,25 +283,15 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
                                 <span className="text-white font-medium">Achieved</span>
                                 <input type="radio" className="hidden" checked={logStatus === 'achieved'} onChange={() => setLogStatus('achieved')} />
                             </label>
-                            
-                            {/* Skip Option */}
                             <label className="flex items-center gap-3 cursor-pointer group">
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${logStatus === 'skipped' ? 'border-slate-400' : 'border-slate-600'}`}>
-                                    {logStatus === 'skipped' && <div className="w-3 h-3 bg-slate-400 rounded-full"/>}
-                                </div>
-                                <span className="text-white font-medium">Skip / Sick Day</span>
-                                <input type="radio" className="hidden" checked={logStatus === 'skipped'} onChange={() => setLogStatus('skipped')} />
-                            </label>
-
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${logStatus === 'unachieved' ? 'border-red-500' : 'border-slate-600'}`}>
-                                    {logStatus === 'unachieved' && <div className="w-3 h-3 bg-red-500 rounded-full"/>}
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${logStatus === 'unachieved' ? 'border-blue-500' : 'border-slate-600'}`}>
+                                    {logStatus === 'unachieved' && <div className="w-3 h-3 bg-blue-500 rounded-full"/>}
                                 </div>
                                 <span className="text-white font-medium">Unachieved</span>
                                 <input type="radio" className="hidden" checked={logStatus === 'unachieved'} onChange={() => setLogStatus('unachieved')} />
                             </label>
                         </div>
-                        {logStatus !== 'unachieved' && (
+                        {logStatus === 'achieved' && (
                             <div className="flex justify-between mb-6">
                                 {EMOJIS.map(item => (
                                     <button key={item.id} onClick={() => setLogMood(item.id)} className={`text-3xl transition-transform ${logMood === item.id ? 'scale-125' : 'opacity-50'}`}>{item.icon}</button>

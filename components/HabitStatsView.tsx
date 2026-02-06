@@ -84,14 +84,11 @@ const HabitStatsView: React.FC<HabitStatsViewProps> = ({ habits, onClose }) => {
                                       </td>
                                       {weekDays.map(day => {
                                           const dateStr = format(day, 'yyyy-MM-dd');
-                                          const log = habit.history[dateStr] as HabitLog | undefined;
-                                          const completed = log?.completed;
-                                          const skipped = log?.status === 'skipped';
-                                          
+                                          const completed = habit.history[dateStr]?.completed;
                                           return (
                                               <td key={day.toString()} className="py-3 text-center">
                                                   <div 
-                                                    className={`w-6 h-6 rounded mx-auto transition-all ${completed ? '' : skipped ? 'bg-slate-300' : 'bg-slate-100'}`}
+                                                    className={`w-6 h-6 rounded mx-auto transition-all ${completed ? '' : 'bg-slate-100'}`}
                                                     style={{ backgroundColor: completed ? habit.color : undefined }}
                                                   />
                                               </td>
@@ -143,14 +140,12 @@ const HabitStatsView: React.FC<HabitStatsViewProps> = ({ habits, onClose }) => {
                                   if (!day) return <div key={i} className="w-full pt-[100%]" />; // spacer
                                   
                                   const dateStr = format(day, 'yyyy-MM-dd');
-                                  const log = habit.history[dateStr] as HabitLog | undefined;
-                                  const completed = log?.completed;
-                                  const skipped = log?.status === 'skipped';
+                                  const completed = habit.history[dateStr]?.completed;
                                   
                                   return (
                                       <div 
                                         key={i} 
-                                        className={`w-full pt-[100%] rounded-sm relative ${completed ? '' : skipped ? 'bg-slate-300' : 'bg-slate-100'}`}
+                                        className={`w-full pt-[100%] rounded-sm relative ${completed ? '' : 'bg-slate-100'}`}
                                         style={{ backgroundColor: completed ? habit.color : undefined }}
                                       >
                                           {/* Aspect Ratio Trick */}
@@ -189,11 +184,9 @@ const HabitStatsView: React.FC<HabitStatsViewProps> = ({ habits, onClose }) => {
                               <div className="text-2xl shrink-0">{log.habit.icon}</div>
                               <div className="min-w-0">
                                   <div className="font-bold text-slate-800 truncate">{log.habit.name}</div>
-                                  <div className="text-xs text-slate-500">
-                                      {log.completed ? 'Completed' : log.status === 'skipped' ? 'Skipped' : 'Skipped'}
-                                  </div>
+                                  <div className="text-xs text-slate-500">{log.completed ? 'Completed' : 'Skipped'}</div>
                               </div>
-                              {log.mood && <div className="ml-auto text-xl">{EMOJIS.find(e => e.id === log.mood)?.icon || log.mood}</div>}
+                              {log.mood && <div className="ml-auto text-xl">{log.mood}</div>}
                           </div>
                       </div>
                   ))}
@@ -201,10 +194,6 @@ const HabitStatsView: React.FC<HabitStatsViewProps> = ({ habits, onClose }) => {
           </div>
       );
   };
-
-  const EMOJIS = [
-    { id: 'crying', icon: '😭' }, { id: 'sad', icon: '☹️' }, { id: 'neutral', icon: '😐' }, { id: 'happy', icon: '🙂' }, { id: 'love', icon: '🥰' }
-  ];
 
   return (
     <div className="flex-1 h-full flex flex-col bg-slate-50 text-slate-900 relative overflow-hidden font-sans">
