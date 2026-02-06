@@ -2,9 +2,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Habit, HabitLog } from '../types';
 import { 
-  Plus, ChevronRight, Check, Bell, Clock, User, Star, CloudSun, Menu, Zap, Calendar, ArrowRight
+  Plus, ChevronRight, Check, Bell, Clock, User, Star, CloudSun, Menu, Zap, Calendar, ArrowRight, MinusCircle
 } from 'lucide-react';
 import { format, addDays, startOfWeek, isSameDay, isToday, isBefore, isAfter, startOfDay } from 'date-fns';
+import confetti from 'canvas-confetti';
 import HabitFormSheet from './HabitFormSheet';
 import HabitDetailView from './HabitDetailView';
 
@@ -27,9 +28,11 @@ const HabitCard: React.FC<{
     onClick: () => void;
     onFocus: () => void;
 }> = ({ habit, dateStr, onToggle, onClick, onFocus }) => {
-    const isCompleted = (habit.history?.[dateStr] as HabitLog | undefined)?.completed;
+    const log = habit.history?.[dateStr] as HabitLog | undefined;
+    const isCompleted = log?.completed;
+    const isSkipped = log?.status === 'skipped';
     
-    // Calculate streak based on history keys
+    // Calculate streak based on history keys (completed only, exclude skipped from breaking but don't count)
     const streak = Object.keys(habit.history || {}).filter(k => habit.history[k].completed).length;
 
     return (
@@ -39,19 +42,21 @@ const HabitCard: React.FC<{
                 group relative p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between
                 ${isCompleted 
                     ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30' 
-                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:shadow-md'
+                    : isSkipped 
+                        ? 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800'
+                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:shadow-md'
                 }
             `}
         >
             <div className="flex items-center gap-4 min-w-0">
                 <div 
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-105 shrink-0 ${isCompleted ? 'opacity-100' : 'opacity-90'}`}
-                    style={{ backgroundColor: `${habit.color}20` }}
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-105 shrink-0 ${isCompleted ? 'opacity-100' : 'opacity-90'} ${isSkipped ? 'grayscale opacity-50' : ''}`}
+                    style={{ backgroundColor: isSkipped ? '#cbd5e1' : `${habit.color}20` }}
                 >
                     {habit.icon}
                 </div>
                 <div className="min-w-0 flex-1">
-                    <h3 className={`font-bold text-base text-slate-800 dark:text-white truncate ${isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
+                    <h3 className={`font-bold text-base text-slate-800 dark:text-white truncate ${isCompleted || isSkipped ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
                         {habit.name}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
@@ -59,13 +64,14 @@ const HabitCard: React.FC<{
                             {streak} Days
                         </span>
                         {habit.quote && <span className="text-xs text-slate-400 truncate max-w-[150px] hidden sm:block">{habit.quote}</span>}
+                        {isSkipped && <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded font-bold">Skipped</span>}
                     </div>
                 </div>
             </div>
 
             <div className="flex items-center gap-3">
-                {/* Focus Button (Only visible on hover or if not completed) */}
-                {!isCompleted && (
+                {/* Focus Button (Only visible on hover or if not completed/skipped) */}
+                {!isCompleted && !isSkipped && (
                     <button 
                         onClick={(e) => { e.stopPropagation(); onFocus(); }}
                         className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors opacity-0 group-hover:opacity-100"
@@ -81,11 +87,13 @@ const HabitCard: React.FC<{
                         w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 shrink-0
                         ${isCompleted 
                             ? 'bg-emerald-500 border-emerald-500 text-white scale-110' 
-                            : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400 text-transparent'
+                            : isSkipped
+                                ? 'bg-slate-300 border-slate-300 text-white'
+                                : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400 text-transparent'
                         }
                     `}
                 >
-                    <Check size={16} strokeWidth={4} />
+                    {isSkipped ? <MinusCircle size={16} /> : <Check size={16} strokeWidth={4} />}
                 </button>
             </div>
         </div>
@@ -156,6 +164,32 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
           Anytime: filteredHabits.filter(h => !h.section || h.section === 'Others')
       };
   }, [filteredHabits]);
+
+  const handleToggle = (id: string, sectionHabits: Habit[]) => {
+      const habit = habits.find(h => h.id === id);
+      const isCompletedNow = habit?.history[selectedDateStr]?.completed;
+      
+      onToggleHabit(id, selectedDateStr);
+
+      // Confetti Logic: If we are turning it ON, check if it was the last one in the section
+      if (!isCompletedNow && isToday(selectedDate)) {
+          const otherHabits = sectionHabits.filter(h => h.id !== id);
+          const allOthersDone = otherHabits.every(h => {
+              const log = h.history[selectedDateStr];
+              return log?.completed || log?.status === 'skipped';
+          });
+
+          if (allOthersDone) {
+              // Trigger confetti
+              confetti({
+                  particleCount: 100,
+                  spread: 70,
+                  origin: { y: 0.6 },
+                  colors: ['#3b82f6', '#10b981', '#f59e0b', '#ec4899']
+              });
+          }
+      }
+  };
 
   if (selectedHabit) {
       return (
@@ -245,7 +279,7 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
                                     key={habit.id}
                                     habit={habit}
                                     dateStr={selectedDateStr}
-                                    onToggle={() => onToggleHabit(habit.id, selectedDateStr)}
+                                    onToggle={() => handleToggle(habit.id, sectionHabits)}
                                     onClick={() => setSelectedHabitId(habit.id)}
                                     onFocus={() => onStartFocus && onStartFocus(habit.id)}
                                 />

@@ -52,8 +52,8 @@ const mergeArrays = <T extends { id: string; updatedAt?: Date | string }>(local:
 };
 
 const LoadingFallback: React.FC = () => (
-    <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-950 h-full">
-        <Loader2 size={32} className="animate-spin text-blue-500" />
+    <div className="flex-1 flex items-center justify-center bg-background-light dark:bg-background-dark h-full">
+        <Loader2 size={32} className="animate-spin text-primary-500" />
     </div>
 );
 
@@ -431,7 +431,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="flex h-screen w-full bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 transition-colors">
         <Sidebar 
             currentView={currentView}
             onChangeView={(view) => { setCurrentView(view); setIsSidebarOpen(false); }}
