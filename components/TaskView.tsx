@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Task, Priority, ViewType, List, AppSettings, Habit } from '../types';
 import { 
@@ -484,7 +483,7 @@ const TaskView: React.FC<TaskViewProps> = ({
         )}
 
         {/* List / Grid Area */}
-        <div className={`flex-1 overflow-y-auto custom-scrollbar pb-24 ${isNotesView ? 'pt-2' : ''}`}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar pb-28 ${isNotesView ? 'pt-2' : ''}`}>
             {filteredTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center p-4 mt-10">
                     <div className="w-32 h-32 mb-6 opacity-50 flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded-full">
@@ -582,7 +581,7 @@ const TaskView: React.FC<TaskViewProps> = ({
                 </div>
             </div>
         ) : (
-            <div className="absolute bottom-6 right-6 z-30 mb-safe">
+            <div className="absolute bottom-20 right-6 z-50 mb-safe">
                 <button 
                     onClick={() => { setInputInitialMode('text'); setShowInputSheet(true); }}
                     className="w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 bg-blue-600 text-white shadow-blue-600/30 hover:bg-blue-700"

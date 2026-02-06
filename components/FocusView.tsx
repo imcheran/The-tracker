@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Play, Pause, Menu, Clock, 
@@ -260,56 +259,57 @@ const FocusView: React.FC<FocusViewProps> = ({
   // --- Renderers ---
 
   const renderTimer = () => (
-      <div className={`flex-1 flex flex-col items-center relative w-full p-6 animate-in fade-in transition-colors duration-700 ${selectedTree.bg}`}>
+      <div className={`flex-1 flex flex-col items-center relative w-full p-4 animate-in fade-in transition-colors duration-700 ${selectedTree.bg}`}>
           
-          {/* Active Task Pill */}
+          {/* Top Info Bar */}
+          <div className="absolute top-2 left-0 right-0 px-4 flex justify-between items-start z-20">
+              {/* Daily Goal (Corner) */}
+              {!isActive && (
+                  <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-xl p-2 flex flex-col items-center">
+                      <div className="text-[9px] font-bold uppercase text-slate-500 dark:text-slate-300 flex items-center gap-1">
+                          Today <Target size={10} />
+                      </div>
+                      <div className="flex items-end gap-1 leading-none mt-1">
+                          <span className="text-sm font-black text-slate-800 dark:text-white">{Math.floor(todayMinutes/60)}h {todayMinutes%60}m</span>
+                          <span className="text-[9px] font-bold text-slate-500">/ 2h</span>
+                      </div>
+                  </div>
+              )}
+
+              {/* Deep Focus Toggle */}
+              {!isActive && (
+                  <button 
+                      onClick={() => setIsDeepFocus(!isDeepFocus)}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ${isDeepFocus ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-white/40 text-slate-600 border-transparent dark:bg-black/20 dark:text-slate-300'}`}
+                  >
+                      {isDeepFocus ? <Lock size={10} /> : <Lock size={10} className="opacity-50"/>}
+                      <span>Deep Mode</span>
+                  </button>
+              )}
+          </div>
+
+          {/* Active Task Pill (Centered) */}
           {activeTask && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-black/40 backdrop-blur-md shadow-sm border border-black/5 dark:border-white/10 rounded-full pl-3 pr-5 py-2 flex items-center gap-2 max-w-[90%] z-20">
-                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                      <CheckCircle2 size={12} strokeWidth={3} />
+              <div className="mt-8 bg-white/80 dark:bg-black/40 backdrop-blur-md shadow-sm border border-black/5 dark:border-white/10 rounded-full pl-2 pr-4 py-1.5 flex items-center gap-2 max-w-[80%] z-10">
+                  <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                      <CheckCircle2 size={10} strokeWidth={3} />
                   </div>
                   <span className="text-xs font-bold text-slate-800 dark:text-white truncate">{activeTask.title}</span>
               </div>
           )}
 
-          {/* Deep Focus Toggle */}
-          {!isActive && (
-              <button 
-                  onClick={() => setIsDeepFocus(!isDeepFocus)}
-                  className={`absolute top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold transition-all border ${isDeepFocus ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-white/50 text-slate-500 border-black/5 dark:bg-black/20 dark:border-white/10'}`}
-                  title="Lock your phone to earn more rewards"
-              >
-                  {isDeepFocus ? <Lock size={12} /> : <Lock size={12} className="opacity-50"/>}
-                  <span className={isDeepFocus ? '' : 'opacity-70'}>Deep Mode</span>
-                  {isDeepFocus && <span className="bg-emerald-600 px-1.5 rounded text-[9px]">+50% Coins</span>}
-              </button>
-          )}
-
           {/* Main Visual Area */}
           <div className="flex-1 flex flex-col items-center justify-center w-full relative min-h-0">
               
-              {/* Daily Progress Goal (Subtle Context) */}
-              {!isActive && (
-                  <div className="absolute top-4 lg:top-10 flex flex-col items-center opacity-60 z-10">
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
-                          Today's Goal <Target size={10} />
-                      </div>
-                      <div className="flex items-end gap-1">
-                          <span className="text-xl font-black text-slate-700 dark:text-slate-200">{Math.floor(todayMinutes/60)}h {todayMinutes%60}m</span>
-                          <span className="text-xs font-bold text-slate-400 mb-1">/ 2h</span>
-                      </div>
-                  </div>
-              )}
-
               {/* Timer Circle */}
-              <div className="relative w-[60vmin] h-[60vmin] max-w-[320px] max-h-[320px] min-w-[240px] min-h-[240px] flex items-center justify-center mt-8">
+              <div className="relative w-[50vmin] h-[50vmin] max-w-[280px] max-h-[280px] min-w-[220px] min-h-[220px] flex items-center justify-center">
                   {/* Progress Ring */}
-                  <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-xl">
-                      <circle cx="50%" cy="50%" r="46%" fill="none" stroke="currentColor" strokeWidth="12" className="text-white/20 dark:text-black/10" />
+                  <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-xl overflow-visible">
+                      <circle cx="50%" cy="50%" r="48%" fill="none" stroke="currentColor" strokeWidth="10" className="text-white/20 dark:text-black/10" />
                       <circle 
-                          cx="50%" cy="50%" r="46%" fill="none" stroke={selectedTree.color} strokeWidth="12" 
-                          strokeDasharray={2 * Math.PI * (144 * 0.92)} // Approx
-                          strokeDashoffset={2 * Math.PI * (144 * 0.92) * (1 - progress)}
+                          cx="50%" cy="50%" r="48%" fill="none" stroke={selectedTree.color} strokeWidth="10" 
+                          strokeDasharray={2 * Math.PI * (140 * 0.96)} // approx based on radius
+                          strokeDashoffset={2 * Math.PI * (140 * 0.96) * (1 - progress)}
                           strokeLinecap="round"
                           className={`transition-all duration-1000 ease-linear ${!isActive ? 'opacity-0' : ''}`}
                       />
@@ -319,50 +319,45 @@ const FocusView: React.FC<FocusViewProps> = ({
                   <div className="z-10 flex flex-col items-center justify-center relative">
                       <div 
                         className={`transition-all duration-1000 ${isActive ? 'scale-100' : 'hover:scale-110 cursor-pointer'} ${isActive && !isPaused ? 'animate-pulse-slow' : ''}`} 
-                        style={{ transform: isActive ? `scale(${0.5 + 0.5 * progress})` : 'scale(1)' }}
+                        style={{ transform: isActive ? `scale(${0.6 + 0.4 * progress})` : 'scale(1)' }}
                       >
                           {isWithered ? (
-                              <Ghost size={120} className="text-slate-400 dark:text-slate-600 drop-shadow-lg" />
+                              <Ghost size={100} className="text-slate-400 dark:text-slate-600 drop-shadow-lg" />
                           ) : isActive && progress < 0.1 ? (
-                              <Sprout size={80} className="text-emerald-500 animate-bounce drop-shadow-lg" />
+                              <Sprout size={60} className="text-emerald-500 animate-bounce drop-shadow-lg" />
                           ) : (
                               <div className="drop-shadow-2xl filter saturate-150">
-                                  <selectedTree.icon size={120} style={{ color: selectedTree.color }} />
+                                  <selectedTree.icon size={100} style={{ color: selectedTree.color }} />
                               </div>
                           )}
                       </div>
                       
                       {/* Timer Text */}
-                      <div className="mt-8 text-5xl sm:text-6xl font-black font-sans text-slate-800 dark:text-white tracking-tighter tabular-nums drop-shadow-sm mix-blend-overlay opacity-90">
+                      <div className="mt-6 text-5xl font-black font-sans text-slate-800 dark:text-white tracking-tighter tabular-nums drop-shadow-sm mix-blend-overlay opacity-90">
                           {formatTime(timeLeft)}
-                      </div>
-                      
-                      {/* Tip */}
-                      <div className="absolute -bottom-24 w-64 text-center">
-                          {isActive ? (
-                              <div className="space-y-2 animate-fade-in">
-                                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed">"{tip}"</p>
-                                  {timeLeft < 300 && (
-                                      <div className="text-xs font-bold text-orange-500 flex items-center justify-center gap-1">
-                                          <AlertTriangle size={12}/> Stay focused to save this tree!
-                                      </div>
-                                  )}
-                              </div>
-                          ) : (
-                              <div className="inline-flex items-center gap-2 bg-white/50 dark:bg-black/20 px-3 py-1 rounded-full backdrop-blur-md border border-white/20">
-                                  <div className={`w-2 h-2 rounded-full ${selectedTree.bg.replace('bg-', 'bg-').replace('50', '500')}`}></div>
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Plant a {selectedTree.name}</span>
-                              </div>
-                          )}
                       </div>
                   </div>
               </div>
+              
+              {/* Context Label */}
+              <div className="h-10 mt-6 flex items-center justify-center">
+                  {isActive ? (
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 text-center max-w-[200px] animate-fade-in px-4">
+                          {timeLeft < 300 ? <span className="text-orange-500 font-bold">Stay focused!</span> : `"${tip}"`}
+                      </p>
+                  ) : (
+                      <div className="inline-flex items-center gap-2 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/20">
+                          <div className={`w-2 h-2 rounded-full ${selectedTree.bg.replace('bg-', 'bg-').replace('50', '500')}`}></div>
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Plant a {selectedTree.name}</span>
+                      </div>
+                  )}
+              </div>
           </div>
 
-          {/* Controls Area */}
-          <div className="w-full max-w-sm flex flex-col gap-6 pb-safe z-20 mt-4">
+          {/* Controls Area (Bottom Fixed Height) */}
+          <div className="w-full max-w-sm flex flex-col gap-4 pb-safe z-20 shrink-0">
               {isActive ? (
-                  <div className="flex items-center gap-4 justify-center">
+                  <div className="flex items-center gap-4 justify-center pb-6">
                       <button 
                           onClick={handleGiveUp}
                           className="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors"
@@ -371,43 +366,43 @@ const FocusView: React.FC<FocusViewProps> = ({
                       </button>
                       <button 
                           onClick={isPaused ? startSession : pauseSession}
-                          className="flex-1 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-xl flex items-center justify-center gap-3 text-slate-800 dark:text-white font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                          className="flex-1 h-14 bg-white dark:bg-slate-800 rounded-2xl shadow-xl flex items-center justify-center gap-3 text-slate-800 dark:text-white font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
                       >
-                          {isPaused ? <Play size={24} fill="currentColor"/> : <Pause size={24} fill="currentColor"/>}
+                          {isPaused ? <Play size={20} fill="currentColor"/> : <Pause size={20} fill="currentColor"/>}
                           <span>{isPaused ? 'Resume' : 'Pause'}</span>
                       </button>
                   </div>
               ) : (
                   <>
                       {/* Tree Carousel */}
-                      <div className="bg-white/60 dark:bg-black/20 p-2 rounded-3xl backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm">
+                      <div className="bg-white/60 dark:bg-black/20 p-2 rounded-2xl backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm">
                           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 snap-x">
                               {TREES.filter(t => unlockedTrees.includes(t.id)).map(tree => (
                                   <button
                                       key={tree.id}
                                       onClick={() => setSelectedTreeId(tree.id)}
                                       className={`
-                                          flex-shrink-0 snap-center p-3 rounded-2xl flex flex-col items-center gap-2 min-w-[72px] transition-all border-2
+                                          flex-shrink-0 snap-center p-2 rounded-xl flex flex-col items-center gap-1 min-w-[60px] transition-all border-2
                                           ${selectedTreeId === tree.id ? `bg-white dark:bg-slate-800 ${tree.accent.replace('text-', 'border-')} shadow-md scale-105` : 'border-transparent hover:bg-white/40 dark:hover:bg-white/10'}
                                       `}
                                   >
-                                      <tree.icon size={28} style={{ color: tree.color }} />
-                                      <span className={`text-[10px] font-bold ${selectedTreeId === tree.id ? 'text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{tree.name}</span>
+                                      <tree.icon size={24} style={{ color: tree.color }} />
+                                      <span className={`text-[9px] font-bold ${selectedTreeId === tree.id ? 'text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>{tree.name}</span>
                                   </button>
                               ))}
-                              <button onClick={() => setActiveTab('store')} className="flex-shrink-0 snap-center p-3 rounded-2xl flex flex-col items-center justify-center gap-2 min-w-[72px] bg-white/40 dark:bg-white/5 border-2 border-transparent hover:border-slate-200 transition-all text-slate-400">
-                                  <Store size={24} />
-                                  <span className="text-[10px] font-bold">Store</span>
+                              <button onClick={() => setActiveTab('store')} className="flex-shrink-0 snap-center p-2 rounded-xl flex flex-col items-center justify-center gap-1 min-w-[60px] bg-white/40 dark:bg-white/5 border-2 border-transparent hover:border-slate-200 transition-all text-slate-400">
+                                  <Store size={20} />
+                                  <span className="text-[9px] font-bold">Store</span>
                               </button>
                           </div>
                       </div>
 
                       {/* Time Slider & Presets */}
-                      <div className="bg-white/60 dark:bg-black/20 px-6 py-4 rounded-3xl backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm">
-                          <div className="flex justify-between items-end mb-4">
-                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Duration</span>
-                              <div className="text-2xl font-black text-slate-800 dark:text-white tabular-nums">
-                                  {Math.floor(initialTime / 60)}<span className="text-sm font-bold text-slate-400 ml-1">min</span>
+                      <div className="bg-white/60 dark:bg-black/20 px-5 py-3 rounded-2xl backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm">
+                          <div className="flex justify-between items-center mb-3">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Duration</span>
+                              <div className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
+                                  {Math.floor(initialTime / 60)}<span className="text-xs font-bold text-slate-400 ml-0.5">min</span>
                               </div>
                           </div>
                           <input 
@@ -421,16 +416,16 @@ const FocusView: React.FC<FocusViewProps> = ({
                                   setInitialTime(val);
                                   setTimeLeft(val);
                               }}
-                              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-slate-900 dark:accent-white"
+                              className="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-slate-900 dark:accent-white mb-3"
                           />
-                          <div className="flex justify-between mt-4">
+                          <div className="flex justify-between">
                               {TIMER_PRESETS.map(m => (
                                   <button 
                                     key={m} 
                                     onClick={() => { setInitialTime(m*60); setTimeLeft(m*60); }}
-                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${Math.floor(initialTime/60) === m ? 'bg-slate-900 text-white dark:bg-white dark:text-black scale-105 shadow-md' : 'bg-white/50 text-slate-600 hover:bg-white dark:bg-black/20 dark:text-slate-400'}`}
+                                    className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${Math.floor(initialTime/60) === m ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-md' : 'bg-white/50 text-slate-600 hover:bg-white dark:bg-black/20 dark:text-slate-400'}`}
                                   >
-                                      {m} min
+                                      {m}m
                                   </button>
                               ))}
                           </div>
@@ -439,9 +434,9 @@ const FocusView: React.FC<FocusViewProps> = ({
                       {/* Plant Button */}
                       <button 
                           onClick={startSession}
-                          className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-3xl font-black text-xl shadow-xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                          className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-black text-lg shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-2"
                       >
-                          <Zap size={24} fill="currentColor" />
+                          <Zap size={20} fill="currentColor" />
                           Start Focus
                       </button>
                   </>

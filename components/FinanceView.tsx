@@ -9,7 +9,7 @@ import {
   Notebook, Gift, CircleDot, CreditCard, User, Banknote, Landmark, CircleDollarSign,
   ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, Users, Pencil, CheckCircle, Target, PiggyBank, Briefcase, Car, Home,
   Calendar, RotateCw, Play, Pause, ExternalLink, BarChart3, Clock, Download, FileText, Smartphone, Monitor, ShoppingCart, Coffee,
-  Heart, Users2, Split, BarChart2
+  Heart, Users2, Split, BarChart2, Eye, Activity
 } from 'lucide-react';
 import { 
   format, isWithinInterval, isToday, eachDayOfInterval, 
@@ -368,6 +368,8 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       let expense = 0;
       monthTransactions.forEach(t => {
           if (t.exclude_from_budget) return;
+          
+          // In joint mode, we usually care about the household budget, so calculate sum of everything
           if (t.type === 'credit') income += t.amount;
           else expense += t.amount;
       });
@@ -379,6 +381,30 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       
       return { income, expense: expense + subCost, balance: income - (expense + subCost) };
   }, [monthTransactions, subscriptions]);
+
+  // Partner specific stats (for Joint View)
+  const partnerStats = useMemo(() => {
+      if (workspaceMode !== 'joint') return null;
+      let income = 0;
+      let expense = 0;
+      
+      const start = startOfMonth(currentMonth);
+      const end = endOfMonth(currentMonth);
+
+      // We need to filter partnerTransactions by month manually since 'monthTransactions' combines both
+      const currentPartnerTransactions = (partnerTransactions || []).filter(t => 
+          t.date && isWithinInterval(parseISO(t.date), { start, end })
+      );
+
+      currentPartnerTransactions.forEach(t => {
+          if (t.exclude_from_budget) return;
+          if (t.type === 'credit') income += t.amount;
+          else expense += t.amount;
+      });
+
+      // Always return object in joint mode to ensure UI rendering
+      return { income, expense, balance: income - expense };
+  }, [partnerTransactions, currentMonth, workspaceMode]);
 
   // Couples Split Logic
   const splitStats = useMemo(() => {
@@ -666,6 +692,42 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                   <div className={`absolute top-1 bottom-1 w-[50%] bg-blue-600 rounded-full transition-transform duration-300 ${workspaceMode === 'joint' ? 'translate-x-full' : 'translate-x-0'}`} />
               </div>
           </div>
+
+          {/* Partner Snapshot Card (Joint Mode Only) - MOVED UP */}
+          {workspaceMode === 'joint' && partnerStats && (
+              <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-purple-100 dark:border-purple-900/30 shadow-sm relative overflow-hidden mb-2 animate-in slide-in-from-top-2">
+                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-50 dark:bg-purple-900/10 rounded-full blur-2xl pointer-events-none"></div>
+                  
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                      <div className="flex items-center gap-2">
+                          <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-full text-purple-600 dark:text-purple-400">
+                              <Users2 size={18} />
+                          </div>
+                          <h3 className="font-bold text-slate-800 dark:text-white text-sm">Partner's Individual Activity</h3>
+                      </div>
+                      <span className="text-[10px] font-bold text-purple-500 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full flex items-center gap-1">
+                          <Activity size={10} className="animate-pulse" /> Live Update
+                      </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 relative z-10">
+                      <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Income</div>
+                          <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(partnerStats.income)}</div>
+                      </div>
+                      <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Expense</div>
+                          <div className="text-sm font-black text-red-600 dark:text-red-400">{formatCurrency(partnerStats.expense)}</div>
+                      </div>
+                      <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">Balance</div>
+                          <div className={`text-sm font-black ${partnerStats.balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}>
+                              {formatCurrency(partnerStats.balance)}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          )}
 
           {/* Couples Split Card (Joint Mode Only) */}
           {workspaceMode === 'joint' && splitStats && (
