@@ -581,7 +581,7 @@ const TaskView: React.FC<TaskViewProps> = ({
                 </div>
             </div>
         ) : (
-            <div className="absolute bottom-20 right-6 z-50 mb-safe">
+            <div className="fixed bottom-24 right-6 z-50 mb-safe">
                 <button 
                     onClick={() => { setInputInitialMode('text'); setShowInputSheet(true); }}
                     className="w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 bg-blue-600 text-white shadow-blue-600/30 hover:bg-blue-700"

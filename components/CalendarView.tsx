@@ -224,7 +224,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                         <button 
                         onClick={() => accessToken ? onSync() : onConnectGCal()} 
                         disabled={isSyncing}
-                        className="w-9 h-9 flex items-center justify-center text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 flex-shrink-0"
+                        className="w-9 h-9 min-w-[2.25rem] flex items-center justify-center text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors disabled:opacity-50 flex-shrink-0"
                         >
                             {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16}/>} 
                         </button>

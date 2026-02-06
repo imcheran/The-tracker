@@ -259,13 +259,13 @@ const FocusView: React.FC<FocusViewProps> = ({
   // --- Renderers ---
 
   const renderTimer = () => (
-      <div className={`flex-1 flex flex-col items-center relative w-full p-4 animate-in fade-in transition-colors duration-700 ${selectedTree.bg}`}>
+      <div className={`flex-1 flex flex-col items-center relative w-full p-4 pb-24 animate-in fade-in transition-colors duration-700 ${selectedTree.bg}`}>
           
           {/* Top Info Bar */}
-          <div className="absolute top-2 left-0 right-0 px-4 flex justify-between items-start z-20">
+          <div className="absolute top-2 left-0 right-0 px-4 flex justify-between items-start z-30 pointer-events-none">
               {/* Daily Goal (Corner) */}
               {!isActive && (
-                  <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-xl p-2 flex flex-col items-center">
+                  <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-xl p-2 flex flex-col items-center pointer-events-auto">
                       <div className="text-[9px] font-bold uppercase text-slate-500 dark:text-slate-300 flex items-center gap-1">
                           Today <Target size={10} />
                       </div>
@@ -280,7 +280,7 @@ const FocusView: React.FC<FocusViewProps> = ({
               {!isActive && (
                   <button 
                       onClick={() => setIsDeepFocus(!isDeepFocus)}
-                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ${isDeepFocus ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-white/40 text-slate-600 border-transparent dark:bg-black/20 dark:text-slate-300'}`}
+                      className={`pointer-events-auto flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ${isDeepFocus ? 'bg-emerald-500 text-white border-emerald-500 shadow-md' : 'bg-white/40 text-slate-600 border-transparent dark:bg-black/20 dark:text-slate-300'}`}
                   >
                       {isDeepFocus ? <Lock size={10} /> : <Lock size={10} className="opacity-50"/>}
                       <span>Deep Mode</span>
@@ -290,7 +290,7 @@ const FocusView: React.FC<FocusViewProps> = ({
 
           {/* Active Task Pill (Centered) */}
           {activeTask && (
-              <div className="mt-8 bg-white/80 dark:bg-black/40 backdrop-blur-md shadow-sm border border-black/5 dark:border-white/10 rounded-full pl-2 pr-4 py-1.5 flex items-center gap-2 max-w-[80%] z-10">
+              <div className="mt-12 bg-white/80 dark:bg-black/40 backdrop-blur-md shadow-sm border border-black/5 dark:border-white/10 rounded-full pl-2 pr-4 py-1.5 flex items-center gap-2 max-w-[80%] z-10">
                   <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
                       <CheckCircle2 size={10} strokeWidth={3} />
                   </div>
@@ -355,12 +355,12 @@ const FocusView: React.FC<FocusViewProps> = ({
           </div>
 
           {/* Controls Area (Bottom Fixed Height) */}
-          <div className="w-full max-w-sm flex flex-col gap-4 pb-safe z-20 shrink-0">
+          <div className="w-full max-w-sm flex flex-col gap-4 pb-safe z-30 shrink-0 absolute bottom-6 left-1/2 -translate-x-1/2 px-4">
               {isActive ? (
-                  <div className="flex items-center gap-4 justify-center pb-6">
+                  <div className="flex items-center gap-4 justify-center">
                       <button 
                           onClick={handleGiveUp}
-                          className="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors"
+                          className="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 flex items-center justify-center hover:bg-red-100 hover:text-red-500 transition-colors shadow-lg"
                       >
                           <X size={24} strokeWidth={3} />
                       </button>
@@ -373,9 +373,9 @@ const FocusView: React.FC<FocusViewProps> = ({
                       </button>
                   </div>
               ) : (
-                  <>
+                  <div className="bg-white/70 dark:bg-black/40 p-4 rounded-3xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl">
                       {/* Tree Carousel */}
-                      <div className="bg-white/60 dark:bg-black/20 p-2 rounded-2xl backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm">
+                      <div className="mb-4">
                           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 snap-x">
                               {TREES.filter(t => unlockedTrees.includes(t.id)).map(tree => (
                                   <button
@@ -397,10 +397,10 @@ const FocusView: React.FC<FocusViewProps> = ({
                           </div>
                       </div>
 
-                      {/* Time Slider & Presets */}
-                      <div className="bg-white/60 dark:bg-black/20 px-5 py-3 rounded-2xl backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm">
+                      {/* Time Slider */}
+                      <div className="mb-4">
                           <div className="flex justify-between items-center mb-3">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Duration</span>
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Duration</span>
                               <div className="text-xl font-black text-slate-800 dark:text-white tabular-nums">
                                   {Math.floor(initialTime / 60)}<span className="text-xs font-bold text-slate-400 ml-0.5">min</span>
                               </div>
@@ -416,7 +416,7 @@ const FocusView: React.FC<FocusViewProps> = ({
                                   setInitialTime(val);
                                   setTimeLeft(val);
                               }}
-                              className="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-slate-900 dark:accent-white mb-3"
+                              className="w-full h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full appearance-none cursor-pointer accent-emerald-500 mb-3"
                           />
                           <div className="flex justify-between">
                               {TIMER_PRESETS.map(m => (
@@ -434,12 +434,12 @@ const FocusView: React.FC<FocusViewProps> = ({
                       {/* Plant Button */}
                       <button 
                           onClick={startSession}
-                          className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-black text-lg shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2 mb-2"
+                          className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-black text-lg shadow-lg shadow-emerald-500/20 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                       >
                           <Zap size={20} fill="currentColor" />
                           Start Focus
                       </button>
-                  </>
+                  </div>
               )}
           </div>
 
