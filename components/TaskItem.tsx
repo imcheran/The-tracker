@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Task, Priority } from '../types';
-import { format, isBefore, isSameDay } from 'date-fns';
-import { Calendar, Flag, Tag, Check } from 'lucide-react';
+import { format, isSameDay, isBefore } from 'date-fns';
+import { Calendar, Flag, Tag, Check, Circle } from 'lucide-react';
 
 interface TaskItemProps {
   task: Task;
@@ -12,14 +12,14 @@ interface TaskItemProps {
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onSelect, selected }) => {
-  
-  const priorityConfig = {
-    [Priority.High]: { bg: 'bg-coral', text: 'text-white' },
-    [Priority.Medium]: { bg: 'bg-yellow-soft', text: 'text-charcoal' },
-    [Priority.Low]: { bg: 'bg-cream', text: 'text-charcoal' },
-    [Priority.None]: { bg: 'bg-gray-100', text: 'text-gray-400' }
+  const priorityColor = {
+    [Priority.High]: 'text-red-500',
+    [Priority.Medium]: 'text-yellow-500',
+    [Priority.Low]: 'text-blue-500',
+    [Priority.None]: 'text-slate-300 dark:text-slate-600'
   };
 
+  // isPast polyfill
   const isOverdue = task.dueDate && 
     isBefore(new Date(task.dueDate), new Date()) && 
     !isSameDay(new Date(task.dueDate), new Date()) && 
@@ -29,47 +29,49 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onSelect, selected 
     <div 
       onClick={() => onSelect(task.id)}
       className={`
-        group relative p-5 rounded-card cursor-pointer transition-all duration-300
-        bg-white shadow-organic hover:shadow-organic-hover hover:-translate-y-1
-        ${selected ? 'ring-2 ring-charcoal' : ''}
-        ${task.isCompleted ? 'opacity-50 grayscale' : ''}
+        group relative p-5 rounded-2xl cursor-pointer transition-all duration-300 ease-out border border-white/40 dark:border-white/5
+        ${selected 
+            ? 'bg-blue-50 dark:bg-blue-900/20 shadow-soft-pressed dark:shadow-soft-dark-pressed' 
+            : 'bg-surface-card_light dark:bg-surface-card_dark shadow-soft-sm dark:shadow-soft-dark-sm hover:-translate-y-1 hover:shadow-soft dark:hover:shadow-soft-dark'
+        }
+        ${task.isCompleted ? 'opacity-60 grayscale' : ''}
       `}
     >
       <div className="flex items-start gap-4">
-        {/* Organic Checkbox */}
+        {/* Neumorphic Checkbox */}
         <button 
           onClick={(e) => { e.stopPropagation(); onToggle(task.id); }}
           className={`
-            w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 mt-0.5 border-2
+            w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 shrink-0 mt-0.5
             ${task.isCompleted 
-                ? 'bg-yellow-soft border-yellow-soft text-charcoal' 
-                : 'bg-transparent border-charcoal/10 hover:border-yellow-soft text-transparent hover:text-yellow-soft/50'
+                ? 'bg-primary-500 text-white shadow-inner' 
+                : 'bg-background-light dark:bg-background-dark shadow-soft-pressed dark:shadow-soft-dark-pressed text-transparent hover:text-slate-300'
             }
           `}
         >
-          <Check size={16} strokeWidth={4} />
+          <Check size={14} strokeWidth={4} />
         </button>
 
         <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start">
-                <h3 className={`text-lg font-bold truncate pr-2 ${task.isCompleted ? 'line-through text-charcoal/40' : 'text-charcoal'}`}>
+                <h3 className={`text-base font-bold truncate pr-2 ${task.isCompleted ? 'line-through text-slate-400' : 'text-slate-800 dark:text-white'}`}>
                     {task.title}
                 </h3>
                 {task.priority !== Priority.None && (
-                    <div className={`w-3 h-3 rounded-full ${priorityConfig[task.priority].bg} shrink-0 mt-2`} />
+                    <Flag size={14} className={`${priorityColor[task.priority]} shrink-0 mt-1`} fill="currentColor" />
                 )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-3 mt-3">
+            <div className="flex flex-wrap items-center gap-3 mt-2">
                 {task.dueDate && (
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${isOverdue ? 'bg-coral text-white' : 'bg-cream text-charcoal/70'}`}>
+                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold ${isOverdue ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
                         <Calendar size={12} />
                         <span>{format(new Date(task.dueDate), 'MMM d')}</span>
                     </div>
                 )}
                 
                 {task.tags.length > 0 && (
-                    <div className="flex items-center gap-1 text-xs font-bold text-charcoal/50 bg-gray-50 px-3 py-1.5 rounded-full">
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
                         <Tag size={12} />
                         <span className="truncate max-w-[100px]">{task.tags.join(', ')}</span>
                     </div>
@@ -77,7 +79,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, onToggle, onSelect, selected 
             </div>
             
             {task.description && (
-                <p className="text-sm text-charcoal/60 mt-2 line-clamp-2 font-medium leading-relaxed">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 line-clamp-1 font-medium">
                     {task.description.replace(/<[^>]*>?/gm, '')}
                 </p>
             )}
