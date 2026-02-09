@@ -11,9 +11,9 @@ interface MobileNavigationProps {
 
 export const MobileNavigation: React.FC<MobileNavigationProps> = React.memo(({ currentView, onChangeView, onMenuClick }) => {
   const navItems = [
-    { id: ViewType.Inbox, icon: Layers, label: 'Tasks' },
-    { id: ViewType.Calendar, icon: Calendar, label: 'Calendar' },
-    { id: ViewType.Focus, icon: Clock, label: 'Focus' },
+    { id: ViewType.Inbox, icon: Layers, label: 'Tasks', color: 'text-blue-600 dark:text-blue-400' },
+    { id: ViewType.Calendar, icon: Calendar, label: 'Calendar', color: 'text-rose-500' },
+    { id: ViewType.Focus, icon: Clock, label: 'Focus', color: 'text-indigo-500' },
   ];
 
   return (
@@ -32,11 +32,11 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = React.memo(({ c
             >
               <div className={`
                   p-1.5 rounded-xl transition-all duration-300
-                  ${isActive ? 'text-blue-600 dark:text-blue-400 -translate-y-1' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600'}
+                  ${isActive ? `${item.color} -translate-y-1` : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600'}
               `}>
                   <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
               </div>
-              <span className={`text-[10px] font-bold transition-all ${isActive ? 'text-blue-600 dark:text-blue-400 scale-100' : 'text-slate-400 dark:text-slate-500 scale-90'}`}>
+              <span className={`text-[10px] font-bold transition-all ${isActive ? `${item.color} scale-100` : 'text-slate-400 dark:text-slate-500 scale-90'}`}>
                   {item.label}
               </span>
             </button>

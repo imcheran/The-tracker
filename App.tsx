@@ -249,8 +249,10 @@ const App: React.FC = () => {
   }, [onTokenExpired]);
 
   // --- Process Incoming Cloud Data with Smart Merge ---
-  const processIncomingData = (data: any) => {
+  const processIncomingData = useCallback((data: any) => {
       if (!data) return;
+      console.log("Processing incoming data...");
+      
       if (data.tasks && Array.isArray(data.tasks)) setTasks(prev => mergeArrays(prev, data.tasks.map((t: any) => ({ ...t, dueDate: t.dueDate ? new Date(t.dueDate) : undefined }))));
       if (data.habits && Array.isArray(data.habits)) setHabits(prev => mergeArrays(prev, data.habits));
       if (data.transactions) setTransactions(prev => mergeArrays(prev, data.transactions));
@@ -262,12 +264,13 @@ const App: React.FC = () => {
       if (data.lists) setLists(prev => mergeArrays(prev, data.lists));
       if (data.focusCategories) setFocusCategories(prev => mergeArrays(prev, data.focusCategories));
       if (data.focusSessions) setFocusSessions(prev => mergeArrays(prev, data.focusSessions));
+      
       if (data.settings) {
           const defaultFeatures = { tasks: true, calendar: true, habits: true, focus: true, notes: true, finance: true };
           const mergedFeatures = { ...defaultFeatures, ...(data.settings.features || {}) };
           setSettings({ ...data.settings, features: mergedFeatures });
       }
-  };
+  }, []);
 
   useEffect(() => {
       const partnerId = settings.couples?.partnerId;
@@ -293,13 +296,22 @@ const App: React.FC = () => {
     const unsubscribe = subscribeToAuthChanges(async (u) => {
       setUser(u);
       if (u) {
+        // Initial Fetch
         const remoteData = await loadUserDataFromFirestore(u.uid);
         if (remoteData) {
           isRemoteUpdate.current = true;
           processIncomingData(remoteData);
           setLastSynced(new Date());
-          setTimeout(() => { isRemoteUpdate.current = false; }, 1000);
+          // Wait a bit before allowing local updates to sync back to avoid race
+          setTimeout(() => { isRemoteUpdate.current = false; }, 2000);
+        } else {
+            // New user or no data on cloud, force immediate save of local data to cloud
+            setSyncStatus('saving');
+            await saveUserDataToFirestore(u.uid, { tasks, lists, habits, focusCategories, focusSessions, transactions, debtors, debts, goals, subscriptions, investments, settings });
+            setSyncStatus('saved');
         }
+
+        // Realtime Listener
         const unsubData = subscribeToDataChanges(u.uid, (data) => {
             if (!isRemoteUpdate.current) {
                 isRemoteUpdate.current = true;
@@ -319,13 +331,15 @@ const App: React.FC = () => {
       setIsAuthReady(true);
     });
     return () => unsubscribe();
-  }, [accessToken, syncWithGoogleCalendar]);
+  }, [accessToken, syncWithGoogleCalendar, processIncomingData]);
 
   // --- Auto-Save Logic ---
   useEffect(() => {
       if (!isAuthReady) return; 
       const currentData = { tasks, lists, habits, focusCategories, focusSessions, transactions, debtors, debts, goals, subscriptions, investments, settings };
       latestDataRef.current = currentData;
+      
+      // Save to Local Storage immediately
       setTimeout(() => {
           saveToStorage(STORAGE_KEYS.TASKS, tasks);
           saveToStorage(STORAGE_KEYS.LISTS, lists);
@@ -341,6 +355,8 @@ const App: React.FC = () => {
           saveToStorage(STORAGE_KEYS.SETTINGS, settings);
           updateWidgetData(habits);
       }, 0);
+
+      // Debounce Save to Firestore
       if (user && !isRemoteUpdate.current) {
           if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
           setSyncStatus('saving');
@@ -359,6 +375,7 @@ const App: React.FC = () => {
     playAlarmSound();
   }, []);
   const handleDeleteTask = useCallback((taskId: string) => setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isDeleted: true, updatedAt: new Date() } : t)), []);
+  
   const handleLogin = async () => {
     try {
       const { user, accessToken } = await loginWithGoogle();
@@ -368,6 +385,22 @@ const App: React.FC = () => {
     } catch (error) { console.error("Login failed", error); alert("Login failed. Please try again."); }
   };
   const handleLogout = async () => { await logoutUser(); setUser(null); setAccessToken(null); };
+
+  const handleManualSync = async () => {
+      if(!user) return;
+      setSyncStatus('saving');
+      const currentData = { tasks, lists, habits, focusCategories, focusSessions, transactions, debtors, debts, goals, subscriptions, investments, settings };
+      await saveUserDataToFirestore(user.uid, currentData);
+      
+      const remoteData = await loadUserDataFromFirestore(user.uid);
+      if(remoteData) {
+          processIncomingData(remoteData);
+          alert("Sync complete. Data merged from cloud.");
+      } else {
+          alert("Sync complete. Local data uploaded.");
+      }
+      setSyncStatus('saved');
+  };
 
   return (
     <div className="flex h-screen w-full bg-[#f0f2f5] dark:bg-black text-slate-900 dark:text-slate-100 transition-colors p-0 md:p-4 gap-4 overflow-hidden">
@@ -558,6 +591,7 @@ const App: React.FC = () => {
                     onLogout={handleLogout}
                     onLogin={handleLogin}
                     onSettings={() => { setShowProfileMenu(false); setShowSettings(true); }}
+                    onSync={handleManualSync}
                 />
             </Suspense>
         )}

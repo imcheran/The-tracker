@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, User, LogOut, LogIn } from 'lucide-react';
+import { X, User, LogOut, LogIn, RefreshCw } from 'lucide-react';
 
 interface ProfileMenuProps {
   user: any;
@@ -8,9 +8,10 @@ interface ProfileMenuProps {
   onLogout: () => void;
   onLogin: () => void;
   onSettings: () => void;
+  onSync?: () => void;
 }
 
-const ProfileMenu: React.FC<ProfileMenuProps> = ({ user, onClose, onLogout, onLogin, onSettings }) => {
+const ProfileMenu: React.FC<ProfileMenuProps> = ({ user, onClose, onLogout, onLogin, onSettings, onSync }) => {
   return (
     <div 
         className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
@@ -45,13 +46,22 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ user, onClose, onLogout, onLo
                     </div>
                     
                     {user ? (
-                        <button 
-                            onClick={onLogout}
-                            className="w-full py-3 border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 rounded-xl text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <LogOut size={18} />
-                            Sign out
-                        </button>
+                        <div className="w-full space-y-2">
+                            <button 
+                                onClick={onSync}
+                                className="w-full py-3 border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-900/10 rounded-xl text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <RefreshCw size={18} />
+                                Sync Now
+                            </button>
+                            <button 
+                                onClick={onLogout}
+                                className="w-full py-3 border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 rounded-xl text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <LogOut size={18} />
+                                Sign out
+                            </button>
+                        </div>
                     ) : (
                         <button 
                             onClick={onLogin}

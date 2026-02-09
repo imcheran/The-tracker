@@ -23,6 +23,30 @@ interface SidebarProps {
   syncStatus?: 'saved' | 'saving' | 'error' | 'offline';
 }
 
+const VIEW_COLORS: Record<string, string> = {
+    [ViewType.Inbox]: 'bg-blue-500',
+    [ViewType.Today]: 'bg-orange-500',
+    [ViewType.Next7Days]: 'bg-violet-500',
+    [ViewType.All]: 'bg-slate-500',
+    [ViewType.Calendar]: 'bg-rose-500',
+    [ViewType.Habits]: 'bg-emerald-500',
+    [ViewType.Focus]: 'bg-indigo-500',
+    [ViewType.Notes]: 'bg-amber-500',
+    [ViewType.Finance]: 'bg-cyan-600',
+};
+
+const TEXT_COLORS: Record<string, string> = {
+    [ViewType.Inbox]: 'text-blue-500',
+    [ViewType.Today]: 'text-orange-500',
+    [ViewType.Next7Days]: 'text-violet-500',
+    [ViewType.All]: 'text-slate-500',
+    [ViewType.Calendar]: 'text-rose-500',
+    [ViewType.Habits]: 'text-emerald-500',
+    [ViewType.Focus]: 'text-indigo-500',
+    [ViewType.Notes]: 'text-amber-500',
+    [ViewType.Finance]: 'text-cyan-600',
+};
+
 const Sidebar: React.FC<SidebarProps> = React.memo(({ 
     currentView, onChangeView, lists, enabledFeatures = ['tasks', 'calendar', 'habits', 'focus', 'notes', 'finance'],
     onOpenSettings, onOpenProfile, isOpen, onClose, onAddList, onDeleteList, onSearch, user, syncStatus = 'saved'
@@ -31,18 +55,28 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
   const [newListTitle, setNewListTitle] = useState('');
 
   // Pill style navigation items
-  const navItemClass = (view: ViewType | string) => `
-    relative flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-300 select-none group
-    ${currentView === view 
-        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 translate-x-1' 
-        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
-    }
-  `;
+  const navItemClass = (view: ViewType | string) => {
+      const activeColor = VIEW_COLORS[view] || 'bg-blue-600';
+      const isActive = currentView === view;
+      
+      return `
+        relative flex items-center gap-3 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-300 select-none group
+        ${isActive 
+            ? `${activeColor} text-white shadow-lg shadow-black/5 translate-x-1` 
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
+        }
+      `;
+  };
 
-  const iconClass = (view: ViewType | string) => `
-    transition-colors duration-300
-    ${currentView === view ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}
-  `;
+  const iconClass = (view: ViewType | string) => {
+      const isActive = currentView === view;
+      const textColor = TEXT_COLORS[view] || 'text-slate-400';
+      
+      return `
+        transition-colors duration-300
+        ${isActive ? 'text-white' : `${textColor} dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white`}
+      `;
+  };
 
   const showFeature = (id: string) => enabledFeatures.includes(id);
 
@@ -77,13 +111,13 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
             {/* Header / Branding */}
             <div className="py-6 flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
                         <Zap size={20} fill="currentColor" />
                     </div>
                     <div className="flex flex-col justify-center">
                         <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Tracker</span>
                         <div className="flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full ${syncStatus === 'saved' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${syncStatus === 'saved' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">{syncStatus === 'saving' ? 'Syncing...' : 'Ready'}</span>
                         </div>
                     </div>

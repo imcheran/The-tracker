@@ -416,7 +416,7 @@ const TaskView: React.FC<TaskViewProps> = ({
         )}
 
         {/* List / Grid Area */}
-        <div className={`flex-1 overflow-y-auto custom-scrollbar pb-28 px-4 md:px-6 pt-4`}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar pb-32 px-4 md:px-6 pt-4`}>
             {filteredTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[60vh] text-center">
                     <div className="w-40 h-40 mb-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center animate-pulse">
@@ -458,9 +458,9 @@ const TaskView: React.FC<TaskViewProps> = ({
 
         {/* Floating Action Button (FAB) Area */}
         {isNotesView ? (
-            <div className={`fixed bottom-6 left-0 right-0 px-6 pointer-events-none z-30 transition-transform duration-300 ${isSelectionMode ? 'translate-y-[200%]' : 'translate-y-0'}`}>
-                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 p-2 rounded-[24px] shadow-2xl flex items-center justify-between pointer-events-auto max-w-md mx-auto">
-                    <div className="flex gap-2">
+            <div className={`fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+1rem)] md:bottom-8 right-6 z-30 transition-transform duration-300 ${isSelectionMode ? 'translate-y-[200%]' : 'translate-y-0'}`}>
+                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 p-2 rounded-[24px] shadow-2xl flex items-center gap-1 pointer-events-auto">
+                    <div className="flex gap-1 pr-2">
                         <button onClick={() => createBlankNote('list')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><CheckSquare size={20} /></button>
                         <button onClick={() => createBlankNote('drawing')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><Brush size={20} /></button>
                         <button onClick={() => createBlankNote('voice')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><Mic size={20} /></button>
@@ -468,17 +468,17 @@ const TaskView: React.FC<TaskViewProps> = ({
                     </div>
                     <button 
                         onClick={() => createBlankNote('text')}
-                        className="w-12 h-12 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform"
+                        className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform"
                     >
                          <Plus size={24} strokeWidth={3} />
                     </button>
                 </div>
             </div>
         ) : (
-            <div className="fixed bottom-8 right-8 z-50">
+            <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+1.5rem)] right-6 md:bottom-8 md:right-8 z-50">
                 <button 
                     onClick={() => { setInputInitialMode('text'); setShowInputSheet(true); }}
-                    className="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-[24px] shadow-2xl shadow-blue-600/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group"
+                    className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-[24px] shadow-2xl shadow-blue-600/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group"
                 >
                     <Plus size={32} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
                 </button>
