@@ -5,7 +5,7 @@ import {
   CheckCircle2, Plus, Inbox, Search, Layers, Archive, Sun, CalendarDays, Trash2, Menu,
   MoreVertical, Check, X, Notebook, Pin, Image as ImageIcon, ChevronDown,
   Palette, Clock, ListTodo, Hash, Lock, PenTool, Mic, Type, MousePointer2, Sparkles, Loader2, Users, LayoutGrid, List as ListIcon,
-  Calendar, FolderInput, ArrowRight, Eye, EyeOff, Circle, Grid, LayoutList, CheckSquare, Brush, Target
+  Calendar, FolderInput, ArrowRight, Eye, EyeOff, Circle, Grid, LayoutList, CheckSquare, Brush, Target, MapPin
 } from 'lucide-react';
 import { format, isSameDay, addDays, isBefore, isToday, isTomorrow, isAfter, startOfDay } from 'date-fns';
 import TaskInputSheet from './TaskInputSheet';
@@ -98,6 +98,11 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
 
     const isOverdue = task.dueDate && isPast(new Date(task.dueDate)) && !isSameDay(new Date(task.dueDate), new Date()) && !task.isCompleted;
 
+    // Styling for Events (e.g., Google Calendar Sync)
+    const containerClasses = task.isEvent 
+        ? "bg-purple-50/50 dark:bg-purple-900/10 border-l-4 border-l-purple-500 border-y border-r border-slate-100 dark:border-slate-800"
+        : "bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800";
+
     return (
         <div className="relative mb-3 select-none touch-pan-y" ref={itemRef}>
             {/* Actions Layer */}
@@ -131,7 +136,7 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
 
             {/* Task Content Layer */}
             <div 
-                className="relative bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-start gap-3 transition-transform duration-200 ease-out z-10 active:scale-[0.98]"
+                className={`relative p-4 rounded-xl shadow-sm flex items-start gap-3 transition-transform duration-200 ease-out z-10 active:scale-[0.98] ${containerClasses}`}
                 style={{ transform: `translateX(${offsetX}px)` }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -140,7 +145,7 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
             >
                 <button 
                     onClick={(e) => { e.stopPropagation(); onToggle(); }}
-                    className={`mt-0.5 shrink-0 ${priorityColor[task.priority]}`}
+                    className={`mt-0.5 shrink-0 ${task.isEvent ? 'text-purple-400' : priorityColor[task.priority]}`}
                 >
                     {task.isCompleted ? <CheckCircle2 size={22} className="text-slate-400" /> : <Circle size={22} />}
                 </button>
@@ -153,15 +158,19 @@ const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({
                     {!isSimplified && (
                         <div className="flex flex-wrap items-center gap-2 mt-1.5">
                             {task.dueDate && (
-                                <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-500 font-bold' : 'text-blue-500 dark:text-blue-400'}`}>
+                                <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-500 font-bold' : (task.isEvent ? 'text-purple-500 dark:text-purple-400' : 'text-blue-500 dark:text-blue-400')}`}>
                                     <Calendar size={12} />
                                     <span>
                                         {isToday(new Date(task.dueDate)) ? 'Today' : 
                                          isTomorrow(new Date(task.dueDate)) ? 'Tomorrow' : 
                                          format(new Date(task.dueDate), 'MMM d')}
+                                        {!task.isAllDay && ` • ${format(new Date(task.dueDate), 'h:mm a')}`}
                                     </span>
-                                    {task.duration && <span className="text-slate-400">• {task.duration}m</span>}
                                 </div>
+                            )}
+                            
+                            {task.isEvent && (
+                                <span className="text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-1.5 py-0.5 rounded font-bold">Event</span>
                             )}
                             
                             {task.tags.length > 0 && (
@@ -363,9 +372,17 @@ const TaskView: React.FC<TaskViewProps> = ({
   const filteredTasks = tasks.filter(task => {
       if (task.isDeleted) return false;
 
-      // Filter out Events from Task Views (except Calendar view, but this component handles Lists)
-      // "Task are like to do things" - so hide events from task lists.
-      if (task.isEvent) return false;
+      // Smart views (All, Today, Next7Days, Search) should show Events (like Google Calendar events).
+      // Standard lists (Inbox, Personal, Work) should generally hide them to keep lists clean.
+      const showEvents = 
+        viewType === ViewType.All || 
+        viewType === ViewType.Today || 
+        viewType === ViewType.Next7Days || 
+        viewType === ViewType.Search;
+
+      if (task.isEvent && !showEvents) {
+          return false;
+      }
       
       const matchesSearch = searchQuery 
         ? (task.title.toLowerCase().includes(searchQuery.toLowerCase()) || task.description?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -384,8 +401,10 @@ const TaskView: React.FC<TaskViewProps> = ({
       }
       
       switch (viewType) {
-          case ViewType.Inbox: return task.listId === 'inbox' && !task.isCompleted;
-          case ViewType.Today: return task.dueDate && isSameDay(new Date(task.dueDate), today) && !task.isCompleted;
+          case ViewType.Inbox: return task.listId === 'inbox' && !task.isCompleted && !task.isEvent;
+          case ViewType.Today: 
+            // Show Tasks OR Events for today
+            return task.dueDate && isSameDay(new Date(task.dueDate), today) && !task.isCompleted;
           case ViewType.Next7Days: {
               // Next 7 Days: From today onwards for 7 days
               return task.dueDate && 
@@ -406,6 +425,11 @@ const TaskView: React.FC<TaskViewProps> = ({
           if (!a.isPinned && b.isPinned) return 1;
           return (new Date(b.updatedAt || b.createdAt || 0).getTime()) - (new Date(a.updatedAt || a.createdAt || 0).getTime());
       }
+      // Sort events/tasks by date primarily in smart views
+      if ((viewType === ViewType.Today || viewType === ViewType.Next7Days || viewType === ViewType.All) && a.dueDate && b.dueDate) {
+         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      
       if (a.priority !== b.priority) return b.priority - a.priority;
       if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       return 0;
@@ -417,7 +441,7 @@ const TaskView: React.FC<TaskViewProps> = ({
           case ViewType.Inbox: return 'Inbox';
           case ViewType.Today: return 'Today';
           case ViewType.Next7Days: return 'Next 7 Days';
-          case ViewType.All: return 'Tasks'; // Renamed from "All Tasks" to just "Tasks" as requested? Or "All Tasks" is fine.
+          case ViewType.All: return 'Tasks'; 
           case ViewType.Completed: return 'Completed';
           case ViewType.Notes: return 'Notes';
           default: return lists.find(l => l.id === viewType)?.name || 'Tasks';
