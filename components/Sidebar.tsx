@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { 
   Inbox, Calendar, Target, Clock, Layers, Tags, 
-  Settings, Plus, Search, Zap, Notebook, Wallet, Sun, CalendarDays, Trash2, X, User, Cloud, CloudOff, Loader2, Check
+  Settings, Plus, Search, Zap, Notebook, Wallet, Sun, CalendarDays, Trash2, X, User, Cloud, CloudOff, Loader2, Check,
+  ListTodo
 } from 'lucide-react';
 import { ViewType } from '../types';
 
@@ -146,8 +147,9 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-1 pb-4">
                 {showFeature('tasks') && (
                     <>
-                        <div onClick={() => onChangeView(ViewType.Inbox)} className={navItemClass(ViewType.Inbox)}>
-                            <Inbox size={18} className={iconClass(ViewType.Inbox)} /> Inbox
+                        {/* Changed ViewType.Inbox to ViewType.All for the top level "Tasks" view */}
+                        <div onClick={() => onChangeView(ViewType.All)} className={navItemClass(ViewType.All)}>
+                            <ListTodo size={18} className={iconClass(ViewType.All)} /> All Tasks
                         </div>
                         <div onClick={() => onChangeView(ViewType.Today)} className={navItemClass(ViewType.Today)}>
                             <Sun size={18} className={iconClass(ViewType.Today)} /> Today
@@ -196,6 +198,11 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
                     <Plus size={14} className="text-slate-400 group-hover:text-blue-600" />
                 </div>
 
+                {/* Inbox is now part of Lists */}
+                <div onClick={() => onChangeView(ViewType.Inbox)} className={navItemClass(ViewType.Inbox)}>
+                    <Inbox size={18} className={iconClass(ViewType.Inbox)} /> Inbox
+                </div>
+
                 {lists.map(list => (
                     <div 
                         key={list.id} 
@@ -215,7 +222,10 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
             {/* Footer */}
             <div className="py-4 border-t border-slate-100 dark:border-slate-800 pb-safe">
                 <button 
-                    onClick={onOpenSettings}
+                    onClick={() => {
+                        if (onOpenSettings) onOpenSettings();
+                        onClose(); // Close sidebar when settings is clicked
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all active:scale-95"
                 >
                     <Settings size={18} />

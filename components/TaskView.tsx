@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Task, Priority, ViewType, List, AppSettings, Habit } from '../types';
 import { 
@@ -6,7 +7,7 @@ import {
   Palette, Clock, ListTodo, Hash, Lock, PenTool, Mic, Type, MousePointer2, Sparkles, Loader2, Users, LayoutGrid, List as ListIcon,
   Calendar, FolderInput, ArrowRight, Eye, EyeOff, Circle, Grid, LayoutList, CheckSquare, Brush, Target
 } from 'lucide-react';
-import { format, isSameDay, addDays, isBefore, isToday, isTomorrow, isAfter } from 'date-fns';
+import { format, isSameDay, addDays, isBefore, isToday, isTomorrow, isAfter, startOfDay } from 'date-fns';
 import TaskInputSheet from './TaskInputSheet';
 import { NoteBackground } from './NoteBackgrounds';
 import SelectionToolbar from './SelectionToolbar';
@@ -361,6 +362,10 @@ const TaskView: React.FC<TaskViewProps> = ({
   // Filter Logic
   const filteredTasks = tasks.filter(task => {
       if (task.isDeleted) return false;
+
+      // Filter out Events from Task Views (except Calendar view, but this component handles Lists)
+      // "Task are like to do things" - so hide events from task lists.
+      if (task.isEvent) return false;
       
       const matchesSearch = searchQuery 
         ? (task.title.toLowerCase().includes(searchQuery.toLowerCase()) || task.description?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -368,7 +373,7 @@ const TaskView: React.FC<TaskViewProps> = ({
 
       if (!matchesSearch) return false;
       
-      const today = new Date();
+      const today = startOfDay(new Date());
       
       if (isNotesView) {
           return task.isNote === true;
@@ -379,9 +384,15 @@ const TaskView: React.FC<TaskViewProps> = ({
       }
       
       switch (viewType) {
-          case ViewType.Inbox: return task.listId === 'inbox' && !task.isCompleted && !task.isEvent;
+          case ViewType.Inbox: return task.listId === 'inbox' && !task.isCompleted;
           case ViewType.Today: return task.dueDate && isSameDay(new Date(task.dueDate), today) && !task.isCompleted;
-          case ViewType.Next7Days: return task.dueDate && isBefore(new Date(task.dueDate), addDays(today, 7)) && !task.isCompleted;
+          case ViewType.Next7Days: {
+              // Next 7 Days: From today onwards for 7 days
+              return task.dueDate && 
+                     isBefore(new Date(task.dueDate), addDays(today, 7)) && 
+                     !isBefore(new Date(task.dueDate), today) && 
+                     !task.isCompleted;
+          }
           case ViewType.Completed: return task.isCompleted;
           case ViewType.All: return !task.isCompleted;
           case ViewType.Trash: return false; 
@@ -406,7 +417,7 @@ const TaskView: React.FC<TaskViewProps> = ({
           case ViewType.Inbox: return 'Inbox';
           case ViewType.Today: return 'Today';
           case ViewType.Next7Days: return 'Next 7 Days';
-          case ViewType.All: return 'All Tasks';
+          case ViewType.All: return 'Tasks'; // Renamed from "All Tasks" to just "Tasks" as requested? Or "All Tasks" is fine.
           case ViewType.Completed: return 'Completed';
           case ViewType.Notes: return 'Notes';
           default: return lists.find(l => l.id === viewType)?.name || 'Tasks';
@@ -600,7 +611,7 @@ const TaskView: React.FC<TaskViewProps> = ({
             // @ts-ignore
             initialMode={inputInitialMode}
             initialConfig={{ 
-                listId: (!isNotesView && viewType !== ViewType.Inbox && viewType !== ViewType.Today && viewType !== ViewType.Next7Days && viewType !== ViewType.Completed) ? viewType : 'inbox',
+                listId: (!isNotesView && viewType !== ViewType.Inbox && viewType !== ViewType.Today && viewType !== ViewType.Next7Days && viewType !== ViewType.Completed && viewType !== ViewType.All) ? viewType : 'inbox',
                 isNote: isNotesView 
             }}
         />

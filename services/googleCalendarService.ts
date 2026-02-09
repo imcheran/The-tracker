@@ -97,7 +97,7 @@ const googleEventToTask = (event: any): Task => {
     description: event.description,
     isCompleted: false,
     priority: priority,
-    listId: 'inbox', // Default to inbox
+    listId: 'calendar', // Use specific list or inbox, handled by view logic
     tags: [],
     dueDate: startDate,
     endDate: endDate,
