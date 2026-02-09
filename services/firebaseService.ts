@@ -51,10 +51,15 @@ const initializeFirebase = () => {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
     // 2. Initialize Auth
-    auth = getAuth(app);
-    setPersistence(auth, browserLocalPersistence).catch(e =>
-      console.warn("Auth Persistence Warning:", e)
-    );
+    try {
+        auth = getAuth(app);
+        setPersistence(auth, browserLocalPersistence).catch(e =>
+          console.warn("Auth Persistence Warning:", e)
+        );
+    } catch (authError) {
+        console.error("Critical Auth Initialization Error:", authError);
+        throw authError;
+    }
 
     // 3. Initialize Firestore
     try {

@@ -25,68 +25,52 @@ const HabitCard: React.FC<{
     dateStr: string;
     onToggle: () => void;
     onClick: () => void;
-    onFocus: () => void;
-}> = ({ habit, dateStr, onToggle, onClick, onFocus }) => {
+}> = ({ habit, dateStr, onToggle, onClick }) => {
     const isCompleted = (habit.history?.[dateStr] as HabitLog | undefined)?.completed;
     
-    // Calculate streak based on history keys
+    // Calculate streak
     const streak = Object.keys(habit.history || {}).filter(k => habit.history[k].completed).length;
 
     return (
         <div 
             onClick={onClick}
             className={`
-                group relative p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between
+                relative aspect-square p-4 rounded-[28px] border transition-all duration-300 cursor-pointer flex flex-col justify-between group bento-card overflow-hidden
                 ${isCompleted 
-                    ? 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30' 
-                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:shadow-md'
+                    ? 'border-transparent text-white shadow-lg' 
+                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
                 }
             `}
+            style={{ 
+                backgroundColor: isCompleted ? habit.color : undefined,
+                boxShadow: isCompleted ? `0 10px 30px -10px ${habit.color}80` : undefined
+            }}
         >
-            <div className="flex items-center gap-4 min-w-0">
-                <div 
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm transition-transform group-hover:scale-105 shrink-0 ${isCompleted ? 'opacity-100' : 'opacity-90'}`}
-                    style={{ backgroundColor: `${habit.color}20` }}
-                >
-                    {habit.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                    <h3 className={`font-bold text-base text-slate-800 dark:text-white truncate ${isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
-                        {habit.name}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                            {streak} Days
-                        </span>
-                        {habit.quote && <span className="text-xs text-slate-400 truncate max-w-[150px] hidden sm:block">{habit.quote}</span>}
-                    </div>
-                </div>
+            {/* Background Icon (Decorative) */}
+            <div className={`absolute -right-2 -bottom-2 text-8xl opacity-10 pointer-events-none transition-transform duration-500 group-hover:scale-110 ${isCompleted ? 'text-white' : 'grayscale'}`}>
+                {habit.icon}
             </div>
 
-            <div className="flex items-center gap-3">
-                {/* Focus Button (Only visible on hover or if not completed) */}
-                {!isCompleted && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onFocus(); }}
-                        className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                        title="Start Focus"
-                    >
-                        <Zap size={18} />
-                    </button>
-                )}
-
+            <div className="flex justify-between items-start z-10">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-colors ${isCompleted ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                    {habit.icon}
+                </div>
                 <button 
                     onClick={(e) => { e.stopPropagation(); onToggle(); }}
-                    className={`
-                        w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 shrink-0
-                        ${isCompleted 
-                            ? 'bg-emerald-500 border-emerald-500 text-white scale-110' 
-                            : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400 text-transparent'
-                        }
-                    `}
+                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 active:scale-90 ${isCompleted ? 'bg-white text-current border-white' : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}
+                    style={{ color: isCompleted ? habit.color : undefined }}
                 >
-                    <Check size={16} strokeWidth={4} />
+                    {isCompleted && <Check size={16} strokeWidth={4} />}
                 </button>
+            </div>
+
+            <div className="z-10">
+                <h3 className={`font-bold text-lg leading-tight mb-1 truncate ${isCompleted ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+                    {habit.name}
+                </h3>
+                <div className={`text-xs font-bold ${isCompleted ? 'text-white/80' : 'text-slate-400'}`}>
+                    {streak} Day Streak
+                </div>
             </div>
         </div>
     );
@@ -100,7 +84,6 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [greeting, setGreeting] = useState('');
 
-  // Derived state: Always get the latest habit object from props
   const selectedHabit = useMemo(() => 
     habits.find(h => h.id === selectedHabitId) || null
   , [habits, selectedHabitId]);
@@ -113,9 +96,6 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
         else setGreeting('Good Evening');
     };
     updateGreeting();
-    // Update periodically
-    const interval = setInterval(updateGreeting, 60000); 
-    return () => clearInterval(interval);
   }, []);
 
   const calendarDays = useMemo(() => {
@@ -128,34 +108,13 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
   // Filter habits based on Start Date and End Date
   const filteredHabits = useMemo(() => {
       const selectedDayStart = startOfDay(selectedDate);
-      
       return habits.filter(h => {
           if (h.isArchived) return false;
-          
-          // Check Start Date
-          if (h.startDate) {
-              const start = startOfDay(new Date(h.startDate));
-              if (isBefore(selectedDayStart, start)) return false;
-          }
-
-          // Check End Date
-          if (h.endDate) {
-              const end = startOfDay(new Date(h.endDate));
-              if (isAfter(selectedDayStart, end)) return false;
-          }
-
+          if (h.startDate && isBefore(selectedDayStart, startOfDay(new Date(h.startDate)))) return false;
+          if (h.endDate && isAfter(selectedDayStart, startOfDay(new Date(h.endDate)))) return false;
           return true;
       });
   }, [habits, selectedDate]);
-
-  const groupedHabits = useMemo(() => {
-      return {
-          Morning: filteredHabits.filter(h => h.section === 'Morning'),
-          Afternoon: filteredHabits.filter(h => h.section === 'Afternoon'),
-          Night: filteredHabits.filter(h => h.section === 'Night'),
-          Anytime: filteredHabits.filter(h => !h.section || h.section === 'Others')
-      };
-  }, [filteredHabits]);
 
   if (selectedHabit) {
       return (
@@ -171,33 +130,28 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
   }
 
   return (
-    <div className="flex-1 h-full flex flex-col bg-slate-50 dark:bg-slate-950 font-sans relative overflow-hidden transition-colors">
+    <div className="h-full flex flex-col relative overflow-hidden">
         
         {/* Header - Safe Area Wrapper */}
-        <div className="pt-safe bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 z-20 shrink-0 sticky top-0">
-            <div className="px-4 py-4 flex justify-between items-center">
-                <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                        <button onClick={onMenuClick} className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-full">
-                            <Menu size={24}/>
-                        </button>
-                        <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{greeting}</h1>
+        <div className="pt-safe shrink-0 px-4 pt-4 z-20">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-[24px] p-4 flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <button onClick={onMenuClick} className="md:hidden p-2 -ml-2 text-slate-500 rounded-full">
+                                <Menu size={24}/>
+                            </button>
+                            <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{greeting}</h1>
+                        </div>
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Keep up the momentum.</p>
                     </div>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-1">Let's build consistency.</p>
+                    <button onClick={onOpenStats} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform">
+                        <ArrowRight size={20} />
+                    </button>
                 </div>
-                
-                {/* Stats Button */}
-                <button 
-                    onClick={onOpenStats}
-                    className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                    <ArrowRight size={20} />
-                </button>
-            </div>
 
-            {/* Calendar Strip */}
-            <div className="px-4 pb-4">
-                <div className="flex justify-between items-center bg-slate-100 dark:bg-slate-850 p-1.5 rounded-2xl">
+                {/* Calendar Strip */}
+                <div className="flex justify-between items-center bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-2xl">
                     {calendarDays.map(day => {
                         const isSelected = isSameDay(day, selectedDate);
                         const isTodayDate = isToday(day);
@@ -206,9 +160,9 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
                                 key={day.toString()}
                                 onClick={() => setSelectedDate(day)}
                                 className={`
-                                    flex flex-col items-center justify-center flex-1 h-14 rounded-xl transition-all duration-200
+                                    flex flex-col items-center justify-center flex-1 h-14 rounded-xl transition-all duration-300
                                     ${isSelected 
-                                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-md scale-105' 
                                         : 'text-slate-400 dark:text-slate-500 hover:bg-white/50 dark:hover:bg-white/5'
                                     }
                                 `}
@@ -223,55 +177,37 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
             </div>
         </div>
 
-        {/* Habit List Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-32 z-10 relative">
-            
-            {/* Sections */}
-            {(Object.entries(groupedHabits) as [string, Habit[]][]).map(([sectionName, sectionHabits]) => {
-                if (sectionHabits.length === 0) return null;
-                return (
-                    <div key={sectionName} className="mt-6 animate-in slide-in-from-bottom-2">
-                        <div className="flex items-center justify-between mb-3 px-1">
-                            <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                {sectionName === 'Morning' && <CloudSun size={14}/>}
-                                {sectionName === 'Night' && <Star size={14}/>}
-                                {sectionName}
-                            </h2>
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">{sectionHabits.length}</span>
-                        </div>
-                        <div className="space-y-3">
-                            {sectionHabits.map(habit => (
-                                <HabitCard 
-                                    key={habit.id}
-                                    habit={habit}
-                                    dateStr={selectedDateStr}
-                                    onToggle={() => onToggleHabit(habit.id, selectedDateStr)}
-                                    onClick={() => setSelectedHabitId(habit.id)}
-                                    onFocus={() => onStartFocus && onStartFocus(habit.id)}
-                                />
-                            ))}
-                        </div>
+        {/* Habit Grid Content */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-32 pt-6 z-10 relative">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-slide-up">
+                {filteredHabits.map(habit => (
+                    <HabitCard 
+                        key={habit.id}
+                        habit={habit}
+                        dateStr={selectedDateStr}
+                        onToggle={() => onToggleHabit(habit.id, selectedDateStr)}
+                        onClick={() => setSelectedHabitId(habit.id)}
+                    />
+                ))}
+                
+                {/* Add New Card */}
+                <button 
+                    onClick={() => setShowAddSheet(true)}
+                    className="aspect-square rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all group"
+                >
+                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Plus size={24} />
                     </div>
-                );
-            })}
+                    <span className="font-bold text-sm">New Habit</span>
+                </button>
+            </div>
 
             {filteredHabits.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 opacity-40 text-slate-400">
                     <Star size={64} className="mb-4 stroke-1" />
                     <p className="font-bold text-lg">No habits for this day</p>
-                    <p className="text-sm">Enjoy your free time!</p>
                 </div>
             )}
-        </div>
-
-        {/* Floating Add Button */}
-        <div className="absolute bottom-6 right-6 z-40 mb-safe">
-            <button 
-                onClick={() => setShowAddSheet(true)}
-                className="w-14 h-14 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-600/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
-            >
-                <Plus size={28} strokeWidth={3} />
-            </button>
         </div>
 
         <HabitFormSheet 

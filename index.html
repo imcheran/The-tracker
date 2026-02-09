@@ -37,13 +37,10 @@
               }
             },
             animation: {
-              'fade-in': 'fadeIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
-              'slide-up': 'slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
-              'slide-down': 'slideDown 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              'fade-in': 'fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              'slide-up': 'slideUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
               'scale-in': 'scaleIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
-              'pop': 'pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              'slide-in-right': 'slideInRight 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
-              'pulse-slow': 'pulseSlow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'breathe': 'breathe 4s ease-in-out infinite',
             },
             keyframes: {
               fadeIn: {
@@ -51,29 +48,16 @@
                 '100%': { opacity: '1' },
               },
               slideUp: {
-                '0%': { transform: 'translateY(15px)', opacity: '0' },
-                '100%': { transform: 'translateY(0)', opacity: '1' },
-              },
-              slideDown: {
-                '0%': { transform: 'translateY(-15px)', opacity: '0' },
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
                 '100%': { transform: 'translateY(0)', opacity: '1' },
               },
               scaleIn: {
                 '0%': { transform: 'scale(0.95)', opacity: '0' },
                 '100%': { transform: 'scale(1)', opacity: '1' },
               },
-              pop: {
-                '0%': { transform: 'scale(0.9)' },
+              breathe: {
+                '0%, 100%': { transform: 'scale(1)' },
                 '50%': { transform: 'scale(1.02)' },
-                '100%': { transform: 'scale(1)' },
-              },
-              slideInRight: {
-                '0%': { transform: 'translateX(100%)' },
-                '100%': { transform: 'translateX(0)' },
-              },
-              pulseSlow: {
-                '0%, 100%': { opacity: '1' },
-                '50%': { opacity: '0.8' },
               }
             }
           }
@@ -89,7 +73,7 @@
       }
       body {
         font-family: var(--font-sans);
-        background-color: #F8FAFC;
+        background-color: #f0f2f5; /* Softer gray for bento background */
         color: #0F172A;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -99,7 +83,7 @@
       }
       
       html.dark body {
-        background-color: #020617;
+        background-color: #000000;
         color: #F8FAFC;
       }
 
@@ -140,26 +124,13 @@
       @keyframes spin { to { transform: rotate(360deg); } }
       @keyframes fadeIn { to { opacity: 1; } }
 
-      /* Refined Scrollbar */
-      ::-webkit-scrollbar { width: 4px; height: 4px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
-      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-      html.dark ::-webkit-scrollbar-thumb { background: #334155; }
-      html.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      /* Refined Scrollbar - Hidden but functional for cleaner bento look */
+      ::-webkit-scrollbar { width: 0px; background: transparent; }
       
-      .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+      .custom-scrollbar::-webkit-scrollbar { width: 4px; }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: rgba(156, 163, 175, 0.5); 
+        background-color: rgba(156, 163, 175, 0.3); 
         border-radius: 20px; 
-        border: 2px solid transparent; 
-        background-clip: content-box;
-      }
-      html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: rgba(75, 85, 99, 0.5);
       }
 
       .pt-safe { padding-top: env(safe-area-inset-top); }
@@ -172,6 +143,18 @@
       }
       html.dark .glass {
         background: rgba(15, 23, 42, 0.6);
+      }
+      
+      /* Bento Hover Effects */
+      .bento-card {
+        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+      }
+      .bento-card:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+      }
+      .bento-card:active {
+        transform: scale(0.98);
       }
     </style>
   <script type="importmap">
@@ -197,20 +180,18 @@
     "@capacitor/preferences": "https://esm.sh/@capacitor/preferences@^6.0.0",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "firebase/": "https://esm.sh/firebase@^12.8.0/"
+    "firebase/": "https://esm.sh/firebase@10.8.0/"
   }
 }
 </script>
 </head>
   <body>
     <div id="root">
-        <!-- Initial Loader: Shown instantly while JS downloads -->
         <div id="initial-loader">
             <div class="loader-spinner"></div>
             <div class="loader-text">Tracker</div>
         </div>
         <script>
-            // Apply Dark Mode to loader immediately if preference exists
             try {
                 const stored = localStorage.getItem('ticktick_clone_theme');
                 if (stored === '"dark"' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {

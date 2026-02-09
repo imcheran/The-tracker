@@ -33,168 +33,95 @@ interface TaskViewProps {
   user?: any;
 }
 
-// --- Swipeable Task Item Component (For Task Lists) ---
-interface SwipeableTaskItemProps {
+// --- Bento Task Card Component ---
+interface BentoTaskCardProps {
     task: Task;
-    isSimplified: boolean;
     onToggle: () => void;
     onSelect: () => void;
     onDelete: () => void;
-    onMove: () => void;
-    onDate: () => void;
+    isSimplified?: boolean;
 }
 
-const SwipeableTaskItem: React.FC<SwipeableTaskItemProps> = ({ 
-    task, isSimplified, onToggle, onSelect, onDelete, onMove, onDate 
-}) => {
-    const [offsetX, setOffsetX] = useState(0);
-    const startX = useRef(0);
-    const isDragging = useRef(false);
-    const itemRef = useRef<HTMLDivElement>(null);
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        startX.current = e.touches[0].clientX;
-        isDragging.current = true;
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isDragging.current) return;
-        const currentX = e.touches[0].clientX;
-        const diff = currentX - startX.current;
-        // Limit swipe distance
-        if (diff > 150) setOffsetX(150);
-        else if (diff < -100) setOffsetX(-100);
-        else setOffsetX(diff);
-    };
-
-    const handleTouchEnd = () => {
-        isDragging.current = false;
-        if (offsetX > 60) {
-            setOffsetX(120); // Keep open right
-        } else if (offsetX < -60) {
-            setOffsetX(-80); // Keep open left
-        } else {
-            setOffsetX(0); // Snap back
-        }
-    };
-
-    // Reset if user interacts elsewhere
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (itemRef.current && !itemRef.current.contains(e.target as Node)) {
-                setOffsetX(0);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const priorityColor = {
-        [Priority.High]: 'text-red-500',
-        [Priority.Medium]: 'text-yellow-500',
-        [Priority.Low]: 'text-blue-500',
-        [Priority.None]: 'text-slate-300'
-    };
-
+const BentoTaskCard: React.FC<BentoTaskCardProps> = ({ task, onToggle, onSelect, onDelete, isSimplified }) => {
     const isOverdue = task.dueDate && isPast(new Date(task.dueDate)) && !isSameDay(new Date(task.dueDate), new Date()) && !task.isCompleted;
-
-    // Styling for Events (e.g., Google Calendar Sync)
-    const containerClasses = task.isEvent 
-        ? "bg-purple-50/50 dark:bg-purple-900/10 border-l-4 border-l-purple-500 border-y border-r border-slate-100 dark:border-slate-800"
-        : "bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800";
-
-    return (
-        <div className="relative mb-3 select-none touch-pan-y" ref={itemRef}>
-            {/* Actions Layer */}
-            <div className="absolute inset-0 flex items-center justify-between rounded-xl overflow-hidden">
-                {/* Left Actions (Swipe Right) */}
-                <div className="flex h-full">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onMove(); setOffsetX(0); }}
-                        className="bg-blue-500 text-white w-14 h-full flex items-center justify-center"
-                    >
-                        <FolderInput size={20} />
-                    </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onDate(); setOffsetX(0); }}
-                        className="bg-orange-500 text-white w-14 h-full flex items-center justify-center"
-                    >
-                        <Calendar size={20} />
+    
+    // Distinct Styling for Calendar Events vs Tasks
+    if (task.isEvent) {
+        return (
+            <div 
+                onClick={onSelect}
+                className="group relative bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border border-blue-100 dark:border-blue-800 p-5 rounded-[24px] bento-card cursor-pointer overflow-hidden flex flex-col justify-between min-h-[140px]"
+            >
+                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="bg-white/50 dark:bg-black/20 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-500 transition-colors">
+                        <Trash2 size={16} />
                     </button>
                 </div>
                 
-                {/* Right Actions (Swipe Left) */}
-                <div className="flex h-full">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                        className="bg-red-500 text-white w-20 h-full flex items-center justify-center"
-                    >
-                        <Trash2 size={20} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Task Content Layer */}
-            <div 
-                className={`relative p-4 rounded-xl shadow-sm flex items-start gap-3 transition-transform duration-200 ease-out z-10 active:scale-[0.98] ${containerClasses}`}
-                style={{ transform: `translateX(${offsetX}px)` }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onClick={onSelect}
-            >
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onToggle(); }}
-                    className={`mt-0.5 shrink-0 ${task.isEvent ? 'text-purple-400' : priorityColor[task.priority]}`}
-                >
-                    {task.isCompleted ? <CheckCircle2 size={22} className="text-slate-400" /> : <Circle size={22} />}
-                </button>
-
-                <div className="flex-1 min-w-0">
-                    <div className={`text-base font-medium truncate ${task.isCompleted ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>
-                        {task.title}
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 p-1.5 rounded-lg">
+                            <Calendar size={16} />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Event</span>
                     </div>
-                    
-                    {!isSimplified && (
-                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            {task.dueDate && (
-                                <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-500 font-bold' : (task.isEvent ? 'text-purple-500 dark:text-purple-400' : 'text-blue-500 dark:text-blue-400')}`}>
-                                    <Calendar size={12} />
-                                    <span>
-                                        {isToday(new Date(task.dueDate)) ? 'Today' : 
-                                         isTomorrow(new Date(task.dueDate)) ? 'Tomorrow' : 
-                                         format(new Date(task.dueDate), 'MMM d')}
-                                        {!task.isAllDay && ` • ${format(new Date(task.dueDate), 'h:mm a')}`}
-                                    </span>
-                                </div>
-                            )}
-                            
-                            {task.isEvent && (
-                                <span className="text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 px-1.5 py-0.5 rounded font-bold">Event</span>
-                            )}
-                            
-                            {task.tags.length > 0 && (
-                                <div className="flex items-center gap-1">
-                                    {task.tags.map(tag => (
-                                        <span key={tag} className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">#{tag}</span>
-                                    ))}
-                                </div>
-                            )}
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white leading-tight line-clamp-2">{task.title}</h3>
+                </div>
 
-                            {task.description && (
-                                <span className="text-xs text-slate-400 line-clamp-1 w-full mt-0.5">
-                                    {task.description.replace(/<[^>]*>?/gm, '')}
-                                </span>
-                            )}
+                <div className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                    {task.dueDate && (
+                        <div className="bg-white/60 dark:bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                            {isToday(new Date(task.dueDate)) ? 'Today' : format(new Date(task.dueDate), 'MMM d')}
+                            {!task.isAllDay && ` • ${format(new Date(task.dueDate), 'h:mm a')}`}
                         </div>
                     )}
                 </div>
+            </div>
+        );
+    }
+
+    // Standard Task Card
+    const priorityColors = {
+        [Priority.High]: 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30',
+        [Priority.Medium]: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30',
+        [Priority.Low]: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30',
+        [Priority.None]: 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+    };
+
+    return (
+        <div 
+            onClick={onSelect}
+            className={`group relative p-5 rounded-[24px] border transition-all duration-300 bento-card cursor-pointer flex flex-col justify-between min-h-[120px] ${priorityColors[task.priority]} ${task.isCompleted ? 'opacity-60 grayscale' : ''}`}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <h3 className={`text-base font-semibold leading-snug ${task.isCompleted ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                    {task.title}
+                </h3>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onToggle(); }}
+                    className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${task.isCompleted ? 'bg-slate-400 border-slate-400 text-white' : 'border-slate-300 hover:border-blue-500'}`}
+                >
+                    {task.isCompleted && <Check size={14} strokeWidth={3} />}
+                </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+                {task.dueDate && (
+                    <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                        <Calendar size={12} />
+                        <span>{format(new Date(task.dueDate), 'MMM d')}</span>
+                    </div>
+                )}
+                
+                {task.tags.map(tag => (
+                    <span key={tag} className="text-[10px] font-bold bg-white/50 dark:bg-white/10 px-2 py-1 rounded-lg text-slate-500 dark:text-slate-400">#{tag}</span>
+                ))}
             </div>
         </div>
     );
 };
 
-// --- Note Item Component (Google Keep Style) ---
+// --- Note Item Component (Bento Style) ---
 interface NoteItemProps { 
     note: Task; 
     onClick: () => void; 
@@ -229,9 +156,9 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
             onMouseDown={handleTouchStart}
             onMouseUp={handleTouchEnd}
             className={`
-                break-inside-avoid mb-3 rounded-xl overflow-hidden cursor-pointer flex flex-col group relative transition-all duration-200
-                ${isSelected ? 'ring-4 ring-slate-800/20 dark:ring-white/20' : ''}
-                ${!hasCustomBg ? 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800' : 'border border-black/5'}
+                break-inside-avoid mb-3 rounded-[24px] overflow-hidden cursor-pointer flex flex-col group relative transition-all duration-300 hover:shadow-lg
+                ${isSelected ? 'ring-4 ring-slate-800/20 dark:ring-white/20 scale-95' : 'hover:-translate-y-1'}
+                ${!hasCustomBg ? 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' : 'border border-black/5'}
             `}
             style={{ 
                 backgroundColor: note.color !== '#ffffff' ? note.color : undefined 
@@ -239,8 +166,8 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
         >
             {/* Selection Checkmark */}
             {isSelected && (
-                <div className="absolute top-2 left-2 z-30 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full p-1 animate-scale-in">
-                    <Check size={12} strokeWidth={3} />
+                <div className="absolute top-3 right-3 z-30 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full p-1 animate-scale-in">
+                    <Check size={14} strokeWidth={3} />
                 </div>
             )}
 
@@ -251,50 +178,33 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
 
             {/* Image Attachment Header */}
             {imageAttachment && (
-                <div className="w-full relative z-10">
-                    <img src={imageAttachment.url} alt="attachment" className="w-full h-auto object-cover max-h-64" />
+                <div className="w-full relative z-10 h-32 overflow-hidden">
+                    <img src={imageAttachment.url} alt="attachment" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 </div>
             )}
             
-            <div className={`p-4 flex flex-col gap-2 relative z-10 ${imageAttachment ? 'pt-3' : ''}`}>
+            <div className={`p-5 flex flex-col gap-2 relative z-10 ${imageAttachment ? 'pt-3' : ''}`}>
                 {note.title && (
-                    <h3 className={`font-bold text-base leading-snug ${note.isCompleted ? 'line-through text-slate-500' : 'text-slate-900 dark:text-slate-100'} ${!hasCustomBg ? 'dark:text-white' : ''}`}>
+                    <h3 className={`font-bold text-lg leading-snug ${note.isCompleted ? 'line-through text-slate-500' : 'text-slate-900 dark:text-slate-100'} ${!hasCustomBg ? 'dark:text-white' : ''}`}>
                         {note.title}
                     </h3>
                 )}
                 
                 {note.description && (
                     <div 
-                        className={`text-sm line-clamp-[10] whitespace-pre-wrap ${hasCustomBg ? 'text-slate-800/90 dark:text-slate-900/90' : 'text-slate-600 dark:text-slate-300'}`}
+                        className={`text-sm line-clamp-6 whitespace-pre-wrap ${hasCustomBg ? 'text-slate-800/80 dark:text-slate-900/80' : 'text-slate-600 dark:text-slate-400'}`}
                         dangerouslySetInnerHTML={{ __html: note.description }}
                     />
-                )}
-
-                {note.subtasks && note.subtasks.length > 0 && (
-                    <div className="space-y-1 mt-1">
-                        {note.subtasks.slice(0, 4).map(st => (
-                            <div key={st.id} className="flex items-center gap-2">
-                                {st.isCompleted ? <CheckSquare size={14} className="text-slate-500" /> : <div className="w-3.5 h-3.5 border-2 border-slate-400 rounded-sm" />}
-                                <span className={`text-xs ${st.isCompleted ? 'line-through text-slate-500' : 'text-slate-700'} ${!hasCustomBg ? 'dark:text-slate-300' : ''} truncate`}>{st.title}</span>
-                            </div>
-                        ))}
-                        {note.subtasks.length > 4 && <div className="text-xs text-slate-500 font-medium pl-6">+{note.subtasks.length - 4} more items</div>}
-                    </div>
                 )}
 
                 {/* Footer: Tags & Date */}
                 {(note.tags.length > 0 || note.isPinned) && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
                         {note.tags.map(tag => (
-                            <span key={tag} className="px-2 py-0.5 bg-black/5 dark:bg-white/10 rounded-md text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                                {tag}
+                            <span key={tag} className="px-2 py-1 bg-black/5 dark:bg-white/10 rounded-lg text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                                #{tag}
                             </span>
                         ))}
-                        {note.isPinned && (
-                            <div className="absolute top-3 right-3 p-1.5 bg-black/5 dark:bg-white/10 rounded-full backdrop-blur-sm">
-                                <Pin size={10} fill="currentColor" className="text-slate-700 dark:text-slate-200" />
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
@@ -373,7 +283,6 @@ const TaskView: React.FC<TaskViewProps> = ({
       if (task.isDeleted) return false;
 
       // Smart views (All, Today, Next7Days, Search) should show Events (like Google Calendar events).
-      // Standard lists (Inbox, Personal, Work) should generally hide them to keep lists clean.
       const showEvents = 
         viewType === ViewType.All || 
         viewType === ViewType.Today || 
@@ -403,17 +312,20 @@ const TaskView: React.FC<TaskViewProps> = ({
       switch (viewType) {
           case ViewType.Inbox: return task.listId === 'inbox' && !task.isCompleted && !task.isEvent;
           case ViewType.Today: 
-            // Show Tasks OR Events for today
             return task.dueDate && isSameDay(new Date(task.dueDate), today) && !task.isCompleted;
           case ViewType.Next7Days: {
-              // Next 7 Days: From today onwards for 7 days
               return task.dueDate && 
                      isBefore(new Date(task.dueDate), addDays(today, 7)) && 
                      !isBefore(new Date(task.dueDate), today) && 
                      !task.isCompleted;
           }
           case ViewType.Completed: return task.isCompleted;
-          case ViewType.All: return !task.isCompleted;
+          case ViewType.All: {
+             if (task.isEvent && task.dueDate && isBefore(new Date(task.dueDate), startOfDay(new Date()))) {
+                 return false;
+             }
+             return !task.isCompleted;
+          }
           case ViewType.Trash: return false; 
           case ViewType.Tags: return true; 
           case ViewType.Search: return true;
@@ -425,81 +337,67 @@ const TaskView: React.FC<TaskViewProps> = ({
           if (!a.isPinned && b.isPinned) return 1;
           return (new Date(b.updatedAt || b.createdAt || 0).getTime()) - (new Date(a.updatedAt || a.createdAt || 0).getTime());
       }
-      // Sort events/tasks by date primarily in smart views
       if ((viewType === ViewType.Today || viewType === ViewType.Next7Days || viewType === ViewType.All) && a.dueDate && b.dueDate) {
          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       }
-      
       if (a.priority !== b.priority) return b.priority - a.priority;
       if (a.dueDate && b.dueDate) return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       return 0;
   });
 
   const getHeaderTitle = () => {
-      if (searchQuery) return 'Search';
+      if (searchQuery) return 'Search Results';
       switch (viewType) {
-          case ViewType.Inbox: return 'Inbox';
-          case ViewType.Today: return 'Today';
-          case ViewType.Next7Days: return 'Next 7 Days';
-          case ViewType.All: return 'Tasks'; 
-          case ViewType.Completed: return 'Completed';
-          case ViewType.Notes: return 'Notes';
+          case ViewType.Inbox: return 'My Inbox';
+          case ViewType.Today: return 'Today\'s Plan';
+          case ViewType.Next7Days: return 'Upcoming Week';
+          case ViewType.All: return 'All Tasks'; 
+          case ViewType.Completed: return 'Archive';
+          case ViewType.Notes: return 'My Notes';
           default: return lists.find(l => l.id === viewType)?.name || 'Tasks';
       }
   };
 
-  const pinnedNotes = isNotesView ? filteredTasks.filter(t => t.isPinned) : [];
-  const otherNotes = isNotesView ? filteredTasks.filter(t => !t.isPinned) : [];
+  const currentList = lists.find(l => l.id === viewType);
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 relative overflow-hidden">
-        {/* Header */}
-        {isNotesView ? (
-            <div className="pt-safe bg-slate-50 dark:bg-slate-950 shrink-0 sticky top-0 z-20 pointer-events-none">
-                <div className={`bg-white dark:bg-slate-900 rounded-full shadow-sm border border-slate-200 dark:border-slate-800 flex items-center h-12 px-2 pointer-events-auto mt-2 mx-4 transition-all duration-200 ${isSelectionMode ? 'translate-y-[-150%] opacity-0' : 'translate-y-0 opacity-100'}`}>
-                    <button onClick={onMenuClick} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+    <div className="h-full flex flex-col relative overflow-hidden">
+        {/* Header - Bento Style */}
+        <div className="pt-safe shrink-0 sticky top-0 z-20 pointer-events-none px-4 md:px-6 pt-4">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-[24px] flex items-center justify-between p-4 pointer-events-auto">
+                <div className="flex items-center gap-4">
+                    <button onClick={onMenuClick} className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors md:hidden">
                         <Menu size={20} />
                     </button>
-                    <div className="flex-1 px-2 text-slate-500 dark:text-slate-400 font-medium truncate">
-                        Search your notes
-                    </div>
-                    <button 
-                        onClick={() => setIsGridView(!isGridView)}
-                        className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                    >
-                        {isGridView ? <LayoutList size={20} /> : <Grid size={20} />}
-                    </button>
-                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold ml-1">
-                        C
-                    </div>
-                </div>
-            </div>
-        ) : (
-            <div className="pt-safe bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 shrink-0 sticky top-0 z-20">
-                <div className="h-16 flex items-center justify-between px-4">
-                    <div className="flex items-center gap-3">
-                        <button onClick={onMenuClick} className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                            <Menu size={20} />
-                        </button>
-                        <h1 className="text-2xl font-bold text-slate-800 dark:text-white" style={{ color: viewType !== ViewType.Inbox && viewType !== ViewType.Today && !isNotesView ? lists.find(l => l.id === viewType)?.color : undefined }}>
+                    <div>
+                        <h1 className="text-xl font-black text-slate-800 dark:text-white leading-none">
                             {getHeaderTitle()}
                         </h1>
+                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wide">
+                            {filteredTasks.length} {filteredTasks.length === 1 ? 'Item' : 'Items'}
+                        </p>
                     </div>
-                    
-                    <div className="flex items-center gap-1">
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    {isNotesView ? (
+                        <button 
+                            onClick={() => setIsGridView(!isGridView)}
+                            className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                        >
+                            {isGridView ? <LayoutList size={20} /> : <Grid size={20} />}
+                        </button>
+                    ) : (
                         <button 
                             onClick={() => setIsSimplifiedView(!isSimplifiedView)}
-                            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-colors"
+                            className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
                         >
                             {isSimplifiedView ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
-                        <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                            <MoreVertical size={20} />
-                        </button>
-                    </div>
+                    )}
                 </div>
             </div>
-        )}
+        </div>
 
         {/* Selection Toolbar Overlay */}
         {isSelectionMode && (
@@ -512,74 +410,45 @@ const TaskView: React.FC<TaskViewProps> = ({
                     setSelectedNoteIds(new Set());
                 }}
                 onPin={() => handleBulkUpdate({ isPinned: true })}
-                onColor={() => { /* Future: Open color picker for bulk */ }}
-                onLabel={() => { /* Future: Open label picker for bulk */ }}
+                onColor={() => { /* Future */ }}
+                onLabel={() => { /* Future */ }}
             />
         )}
 
         {/* List / Grid Area */}
-        <div className={`flex-1 overflow-y-auto custom-scrollbar pb-28 ${isNotesView ? 'pt-2' : ''}`}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar pb-28 px-4 md:px-6 pt-4`}>
             {filteredTasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center p-4 mt-10">
-                    <div className="w-32 h-32 mb-6 opacity-50 flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded-full">
-                        {isNotesView ? <Notebook size={48} className="text-slate-300"/> : <Inbox size={48} className="text-slate-300"/>}
+                <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+                    <div className="w-40 h-40 mb-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center animate-pulse">
+                        {isNotesView ? <Notebook size={64} className="text-slate-300 dark:text-slate-600"/> : <Inbox size={64} className="text-slate-300 dark:text-slate-600"/>}
                     </div>
-                    <p className="text-slate-500 font-medium text-lg">
-                        {isNotesView ? "Notes you add appear here" : "All clear! No tasks here."}
-                    </p>
+                    <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200">All caught up!</h3>
+                    <p className="text-slate-500 font-medium mt-2">Time to relax or start something new.</p>
                 </div>
             ) : (
                 isNotesView ? (
-                    <div className="p-4 space-y-6">
-                        {/* Pinned Notes Section */}
-                        {pinnedNotes.length > 0 && (
-                            <div className="space-y-2">
-                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2">Pinned</div>
-                                <div className={`${isGridView ? 'columns-2 md:columns-3 lg:columns-4 gap-3 space-y-3' : 'flex flex-col space-y-3'}`}>
-                                    {pinnedNotes.map(note => (
-                                        <NoteItem 
-                                            key={note.id} 
-                                            note={note} 
-                                            onClick={() => handleNoteClick(note.id)} 
-                                            onLongPress={() => handleLongPressNote(note.id)}
-                                            isSelected={selectedNoteIds.has(note.id)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Other Notes Section */}
-                        {otherNotes.length > 0 && (
-                            <div className="space-y-2">
-                                {pinnedNotes.length > 0 && <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2">Others</div>}
-                                <div className={`${isGridView ? 'columns-2 md:columns-3 lg:columns-4 gap-3 space-y-3' : 'flex flex-col space-y-3'}`}>
-                                    {otherNotes.map(note => (
-                                        <NoteItem 
-                                            key={note.id} 
-                                            note={note} 
-                                            onClick={() => handleNoteClick(note.id)} 
-                                            onLongPress={() => handleLongPressNote(note.id)}
-                                            isSelected={selectedNoteIds.has(note.id)}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                    <div className={`${isGridView ? 'columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4' : 'flex flex-col space-y-4'} pb-10`}>
+                        {filteredTasks.map(note => (
+                            <NoteItem 
+                                key={note.id} 
+                                note={note} 
+                                onClick={() => handleNoteClick(note.id)} 
+                                onLongPress={() => handleLongPressNote(note.id)}
+                                isSelected={selectedNoteIds.has(note.id)}
+                            />
+                        ))}
                     </div>
                 ) : (
-                    // Standard List for Tasks
-                    <div className="space-y-1 p-4">
+                    // Responsive Grid for Tasks (Bento Style)
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
                         {filteredTasks.map(task => (
-                            <SwipeableTaskItem 
+                            <BentoTaskCard 
                                 key={task.id}
                                 task={task}
                                 isSimplified={isSimplifiedView}
                                 onToggle={() => onToggleTask(task.id)}
                                 onSelect={() => onSelectTask(task.id)}
                                 onDelete={() => onDeleteTask?.(task.id)}
-                                onMove={() => setTaskToMove(task.id)}
-                                onDate={() => setTaskToEditDate(task)}
                             />
                         ))}
                     </div>
@@ -587,46 +456,36 @@ const TaskView: React.FC<TaskViewProps> = ({
             )}
         </div>
 
-        {/* Bottom Bar: Keep Style for Notes, FAB for Tasks */}
+        {/* Floating Action Button (FAB) Area */}
         {isNotesView ? (
-            <div className={`fixed bottom-0 left-0 right-0 h-20 pointer-events-none z-30 flex items-end justify-between px-4 pb-4 transition-transform duration-300 ${isSelectionMode ? 'translate-y-[100%]' : 'translate-y-0'}`}>
-                {/* Bottom Bar Background */}
-                <div className="absolute inset-x-0 bottom-0 h-14 bg-slate-50/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 pointer-events-auto flex items-center px-4 gap-4 backdrop-blur-md">
-                    <button onClick={() => createBlankNote('list')} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 rounded-full transition-colors"><CheckSquare size={20} /></button>
-                    <button onClick={() => createBlankNote('drawing')} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 rounded-full transition-colors"><Brush size={20} /></button>
-                    <button onClick={() => createBlankNote('voice')} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 rounded-full transition-colors"><Mic size={20} /></button>
-                    <button onClick={() => createBlankNote('image')} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-black/5 rounded-full transition-colors"><ImageIcon size={20} /></button>
-                </div>
-                
-                {/* FAB */}
-                <div className="pointer-events-auto relative z-40 mb-3 mr-1">
+            <div className={`fixed bottom-6 left-0 right-0 px-6 pointer-events-none z-30 transition-transform duration-300 ${isSelectionMode ? 'translate-y-[200%]' : 'translate-y-0'}`}>
+                <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 p-2 rounded-[24px] shadow-2xl flex items-center justify-between pointer-events-auto max-w-md mx-auto">
+                    <div className="flex gap-2">
+                        <button onClick={() => createBlankNote('list')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><CheckSquare size={20} /></button>
+                        <button onClick={() => createBlankNote('drawing')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><Brush size={20} /></button>
+                        <button onClick={() => createBlankNote('voice')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><Mic size={20} /></button>
+                        <button onClick={() => createBlankNote('image')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><ImageIcon size={20} /></button>
+                    </div>
                     <button 
                         onClick={() => createBlankNote('text')}
-                        className="w-14 h-14 bg-white dark:bg-slate-800 rounded-[18px] shadow-[0_4px_12px_rgba(0,0,0,0.15)] flex items-center justify-center border border-slate-100 dark:border-slate-700 transition-transform active:scale-95"
+                        className="w-12 h-12 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform"
                     >
-                         {/* Multi-colored Plus approximation using SVG */}
-                         <svg width="24" height="24" viewBox="0 0 24 24" className="drop-shadow-sm">
-                            <path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z" fill="#D93025" className="dark:fill-white" /> 
-                            <path d="M11 5h2v6h-2z" fill="#EA4335" className="dark:fill-white"/>
-                            <path d="M13 11h6v2h-6z" fill="#FBBC04" className="dark:fill-white"/>
-                            <path d="M11 13h2v6h-2z" fill="#34A853" className="dark:fill-white"/>
-                            <path d="M5 11h6v2H5z" fill="#4285F4" className="dark:fill-white"/>
-                         </svg>
+                         <Plus size={24} strokeWidth={3} />
                     </button>
                 </div>
             </div>
         ) : (
-            <div className="fixed bottom-24 right-6 z-50 mb-safe">
+            <div className="fixed bottom-8 right-8 z-50">
                 <button 
                     onClick={() => { setInputInitialMode('text'); setShowInputSheet(true); }}
-                    className="w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transition-all active:scale-95 bg-blue-600 text-white shadow-blue-600/30 hover:bg-blue-700"
+                    className="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-[24px] shadow-2xl shadow-blue-600/40 flex items-center justify-center hover:scale-105 active:scale-95 transition-all group"
                 >
-                    <Plus size={28} />
+                    <Plus size={32} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
                 </button>
             </div>
         )}
 
-        {/* Task/Note Input Sheet (Legacy for Tasks, bypassed for Notes) */}
+        {/* Input Sheets */}
         <TaskInputSheet 
             isOpen={showInputSheet}
             onClose={() => setShowInputSheet(false)}
@@ -640,7 +499,6 @@ const TaskView: React.FC<TaskViewProps> = ({
             }}
         />
 
-        {/* Date Edit Sheet (For Tasks) */}
         <TaskInputSheet 
             isOpen={!!taskToEditDate}
             onClose={() => setTaskToEditDate(undefined)}
@@ -650,34 +508,6 @@ const TaskView: React.FC<TaskViewProps> = ({
             existingTask={taskToEditDate}
             activePicker='date'
         />
-
-        {/* Move Task Dialog */}
-        {taskToMove && (
-            <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setTaskToMove(null)}>
-                <div className="bg-white dark:bg-slate-900 w-full max-w-xs rounded-2xl shadow-2xl overflow-hidden animate-in scale-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                    <div className="p-4 border-b border-slate-100 dark:border-slate-800">
-                        <h3 className="font-bold text-slate-800 dark:text-white">Move Task To...</h3>
-                    </div>
-                    <div className="max-h-[300px] overflow-y-auto">
-                        {[{id: 'inbox', name: 'Inbox', color: '#3b82f6'}, ...lists].map(list => (
-                            <button 
-                                key={list.id}
-                                onClick={() => {
-                                    const task = tasks.find(t => t.id === taskToMove);
-                                    if (task) onUpdateTask({ ...task, listId: list.id });
-                                    setTaskToMove(null);
-                                }}
-                                className="w-full flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                            >
-                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: list.color }} />
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{list.name}</span>
-                                {tasks.find(t => t.id === taskToMove)?.listId === list.id && <Check size={16} className="ml-auto text-blue-500" />}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        )}
     </div>
   );
 };

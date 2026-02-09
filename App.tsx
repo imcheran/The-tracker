@@ -7,9 +7,7 @@ const TaskDetailView = lazy(() => import('./components/TaskDetailView'));
 const HabitView = lazy(() => import('./components/HabitView'));
 const HabitStatsView = lazy(() => import('./components/HabitStatsView'));
 const FocusView = lazy(() => import('./components/FocusView'));
-const MatrixView = lazy(() => import('./components/MatrixView'));
 const CalendarView = lazy(() => import('./components/CalendarView'));
-const KanbanView = lazy(() => import('./components/KanbanView'));
 const TagsView = lazy(() => import('./components/TagsView'));
 const FinanceView = lazy(() => import('./components/FinanceView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
@@ -52,7 +50,7 @@ const mergeArrays = <T extends { id: string; updatedAt?: Date | string }>(local:
 };
 
 const LoadingFallback: React.FC = () => (
-    <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-950 h-full">
+    <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900 h-full rounded-[32px]">
         <Loader2 size={32} className="animate-spin text-blue-500" />
     </div>
 );
@@ -95,8 +93,6 @@ const App: React.FC = () => {
       const saved = loadFromStorage<AppSettings>(STORAGE_KEYS.SETTINGS, {});
       const defaultFeatures = {
           tasks: true, 
-          matrix: true,
-          kanban: true,
           calendar: true,
           habits: true,
           focus: true,
@@ -135,7 +131,7 @@ const App: React.FC = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(() => loadFromStorage(STORAGE_KEYS.SUBSCRIPTIONS, []));
   const [investments, setInvestments] = useState<Investment[]>(() => loadFromStorage(STORAGE_KEYS.INVESTMENTS, []));
 
-  // --- Partner Data State (Read-only from partner's stream) ---
+  // --- Partner Data State ---
   const [partnerTransactions, setPartnerTransactions] = useState<Transaction[]>([]);
   const [partnerGoals, setPartnerGoals] = useState<SavingsGoal[]>([]);
 
@@ -219,8 +215,27 @@ const App: React.FC = () => {
           const events = await fetchCalendarEvents(token, start, end);
           
           setTasks(prev => {
+              const existingEventsMap = new Map<string, Task>();
+              prev.forEach(t => {
+                  if (t.isEvent && t.externalId) {
+                      existingEventsMap.set(t.externalId, t);
+                  }
+              });
+
               const localTasks = prev.filter(t => !t.isEvent);
-              return [...localTasks, ...events];
+              const mergedEvents = events.map(evt => {
+                  const existing = evt.externalId ? existingEventsMap.get(evt.externalId) : null;
+                  if (existing) {
+                      return { 
+                          ...evt, 
+                          isCompleted: existing.isCompleted, 
+                          listId: existing.listId,
+                          id: existing.id
+                      };
+                  }
+                  return evt;
+              });
+              return [...localTasks, ...mergedEvents];
           });
           setLastSynced(new Date());
       } catch (error) {
@@ -236,71 +251,34 @@ const App: React.FC = () => {
   // --- Process Incoming Cloud Data with Smart Merge ---
   const processIncomingData = (data: any) => {
       if (!data) return;
-      
-      if (data.tasks && Array.isArray(data.tasks)) {
-          setTasks(prev => mergeArrays(prev, data.tasks.map((t: any) => ({ ...t, dueDate: t.dueDate ? new Date(t.dueDate) : undefined }))));
-      }
-      
-      if (data.habits && Array.isArray(data.habits)) {
-          setHabits(prev => mergeArrays(prev, data.habits));
-      }
-
+      if (data.tasks && Array.isArray(data.tasks)) setTasks(prev => mergeArrays(prev, data.tasks.map((t: any) => ({ ...t, dueDate: t.dueDate ? new Date(t.dueDate) : undefined }))));
+      if (data.habits && Array.isArray(data.habits)) setHabits(prev => mergeArrays(prev, data.habits));
       if (data.transactions) setTransactions(prev => mergeArrays(prev, data.transactions));
       if (data.goals) setGoals(prev => mergeArrays(prev, data.goals));
       if (data.debtors) setDebtors(prev => mergeArrays(prev, data.debtors));
       if (data.debts) setDebts(prev => mergeArrays(prev, data.debts));
       if (data.subscriptions) setSubscriptions(prev => mergeArrays(prev, data.subscriptions));
       if (data.investments) setInvestments(prev => mergeArrays(prev, data.investments));
-
       if (data.lists) setLists(prev => mergeArrays(prev, data.lists));
       if (data.focusCategories) setFocusCategories(prev => mergeArrays(prev, data.focusCategories));
       if (data.focusSessions) setFocusSessions(prev => mergeArrays(prev, data.focusSessions));
-      
       if (data.settings) {
-          const defaultFeatures = { 
-              tasks: true,
-              matrix: true,
-              kanban: true,
-              calendar: true, 
-              habits: true, 
-              focus: true, 
-              notes: true, 
-              finance: true 
-          };
+          const defaultFeatures = { tasks: true, calendar: true, habits: true, focus: true, notes: true, finance: true };
           const mergedFeatures = { ...defaultFeatures, ...(data.settings.features || {}) };
           setSettings({ ...data.settings, features: mergedFeatures });
       }
   };
 
-  // --- Partner Data Syncing ---
   useEffect(() => {
-      // Clean up previous subscription if partner ID changes or removed
-      if (partnerSubscriptionRef.current) {
-          partnerSubscriptionRef.current();
-          partnerSubscriptionRef.current = null;
-      }
-
       const partnerId = settings.couples?.partnerId;
-      
       if (partnerId) {
-          console.log("Subscribing to partner data:", partnerId);
-          // Subscribe to partner's data stream
           const unsub = subscribeToDataChanges(partnerId, (data) => {
               if (data) {
-                  // We only care about finance data from the partner for now
                   if (data.transactions && Array.isArray(data.transactions)) {
-                      // Mark them as partner's implicitly by ID if needed, 
-                      // or just store them separately
-                      const pTransactions = data.transactions.map((t: any) => ({
-                          ...t,
-                          // Ensure we tag them if they haven't been tagged already (though paidBy should exist)
-                          paidBy: t.paidBy || partnerId
-                      }));
+                      const pTransactions = data.transactions.map((t: any) => ({ ...t, paidBy: t.paidBy || partnerId }));
                       setPartnerTransactions(pTransactions);
                   }
-                  if (data.goals && Array.isArray(data.goals)) {
-                      setPartnerGoals(data.goals);
-                  }
+                  if (data.goals && Array.isArray(data.goals)) setPartnerGoals(data.goals);
               }
           });
           partnerSubscriptionRef.current = unsub;
@@ -308,11 +286,8 @@ const App: React.FC = () => {
           setPartnerTransactions([]);
           setPartnerGoals([]);
       }
-
-      return () => {
-          if (partnerSubscriptionRef.current) partnerSubscriptionRef.current();
-      };
-  }, [settings.couples?.partnerId]); // Re-run when partner ID changes
+      return () => { if (partnerSubscriptionRef.current) partnerSubscriptionRef.current(); };
+  }, [settings.couples?.partnerId]);
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(async (u) => {
@@ -325,7 +300,6 @@ const App: React.FC = () => {
           setLastSynced(new Date());
           setTimeout(() => { isRemoteUpdate.current = false; }, 1000);
         }
-        
         const unsubData = subscribeToDataChanges(u.uid, (data) => {
             if (!isRemoteUpdate.current) {
                 isRemoteUpdate.current = true;
@@ -347,18 +321,11 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [accessToken, syncWithGoogleCalendar]);
 
-  // --- Auto-Save Logic with Safety Net ---
+  // --- Auto-Save Logic ---
   useEffect(() => {
       if (!isAuthReady) return; 
-
-      const currentData = {
-          tasks, lists, habits, focusCategories, focusSessions, 
-          transactions, debtors, debts, goals, subscriptions, investments, settings
-      };
-
+      const currentData = { tasks, lists, habits, focusCategories, focusSessions, transactions, debtors, debts, goals, subscriptions, investments, settings };
       latestDataRef.current = currentData;
-
-      // Optimistic Update: Save to LocalStorage in the next tick to avoid blocking UI
       setTimeout(() => {
           saveToStorage(STORAGE_KEYS.TASKS, tasks);
           saveToStorage(STORAGE_KEYS.LISTS, lists);
@@ -374,64 +341,37 @@ const App: React.FC = () => {
           saveToStorage(STORAGE_KEYS.SETTINGS, settings);
           updateWidgetData(habits);
       }, 0);
-
       if (user && !isRemoteUpdate.current) {
           if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
           setSyncStatus('saving');
           saveTimeoutRef.current = setTimeout(() => {
               saveUserDataToFirestore(user.uid, currentData);
               setSyncStatus('saved');
-          }, 2000); // Debounce saves
+          }, 2000);
       }
   }, [tasks, lists, habits, focusCategories, focusSessions, transactions, debtors, debts, goals, subscriptions, investments, settings, user, isAuthReady]);
 
   // --- Handlers ---
-
-  const handleAddTask = useCallback((task: Task) => {
-    setTasks(prev => [...prev, task]);
-  }, []);
-
-  const handleUpdateTask = useCallback((task: Task) => {
-    setTasks(prev => prev.map(t => t.id === task.id ? task : t));
-  }, []);
-
+  const handleAddTask = useCallback((task: Task) => setTasks(prev => [...prev, task]), []);
+  const handleUpdateTask = useCallback((task: Task) => setTasks(prev => prev.map(t => t.id === task.id ? task : t)), []);
   const handleToggleTask = useCallback((taskId: string) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id === taskId) {
-        return { ...t, isCompleted: !t.isCompleted, updatedAt: new Date() };
-      }
-      return t;
-    }));
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isCompleted: !t.isCompleted, updatedAt: new Date() } : t));
     playAlarmSound();
   }, []);
-
-  const handleDeleteTask = useCallback((taskId: string) => {
-     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isDeleted: true, updatedAt: new Date() } : t));
-  }, []);
-
+  const handleDeleteTask = useCallback((taskId: string) => setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isDeleted: true, updatedAt: new Date() } : t)), []);
   const handleLogin = async () => {
     try {
       const { user, accessToken } = await loginWithGoogle();
       setUser(user);
       setAccessToken(accessToken);
-      if (accessToken) {
-          localStorage.setItem('google_access_token', accessToken);
-          syncWithGoogleCalendar(accessToken);
-      }
-    } catch (error) {
-      console.error("Login failed", error);
-      alert("Login failed. Please try again.");
-    }
+      if (accessToken) { localStorage.setItem('google_access_token', accessToken); syncWithGoogleCalendar(accessToken); }
+    } catch (error) { console.error("Login failed", error); alert("Login failed. Please try again."); }
   };
-
-  const handleLogout = async () => {
-    await logoutUser();
-    setUser(null);
-    setAccessToken(null);
-  };
+  const handleLogout = async () => { await logoutUser(); setUser(null); setAccessToken(null); };
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="flex h-screen w-full bg-[#f0f2f5] dark:bg-black text-slate-900 dark:text-slate-100 transition-colors p-0 md:p-4 gap-4 overflow-hidden">
+        {/* Sidebar as a Floating Card on Desktop */}
         <Sidebar 
             currentView={currentView}
             onChangeView={(view) => { setCurrentView(view); setIsSidebarOpen(false); }}
@@ -448,7 +388,8 @@ const App: React.FC = () => {
             syncStatus={syncStatus}
         />
         
-        <main className="flex-1 flex flex-col h-full relative overflow-hidden">
+        {/* Main Content Area - Bento Card Style */}
+        <main className="flex-1 flex flex-col h-full relative overflow-hidden bg-white dark:bg-slate-950 md:rounded-[32px] shadow-sm md:shadow-xl transition-all">
             <Suspense fallback={<LoadingFallback />}>
                 {(currentView === ViewType.Inbox || currentView === ViewType.Today || currentView === ViewType.Next7Days || currentView === ViewType.Completed || currentView === ViewType.Trash || currentView === ViewType.All || currentView === ViewType.Search || currentView === ViewType.Archive || currentView === ViewType.Notes || lists.find(l => l.id === currentView)) && (
                     <TaskView 
@@ -486,26 +427,6 @@ const App: React.FC = () => {
                         user={user}
                     />
                 )}
-                {currentView === ViewType.Matrix && (
-                    <MatrixView 
-                        tasks={tasks}
-                        lists={lists}
-                        onAddTask={handleAddTask}
-                        onUpdateTask={handleUpdateTask}
-                        onSelectTask={(id) => setSelectedTaskId(id)}
-                        onMenuClick={() => setIsSidebarOpen(true)}
-                    />
-                )}
-                {currentView === ViewType.Kanban && (
-                    <KanbanView 
-                        tasks={tasks}
-                        lists={lists}
-                        onAddTask={handleAddTask}
-                        onToggleTask={handleToggleTask}
-                        onSelectTask={(id) => setSelectedTaskId(id)}
-                        onMenuClick={() => setIsSidebarOpen(true)}
-                    />
-                )}
                 {currentView === ViewType.Habits && (
                     <HabitView 
                         habits={habits}
@@ -525,7 +446,6 @@ const App: React.FC = () => {
                         onOpenStats={() => setCurrentView(ViewType.HabitStats)}
                         onStartFocus={(habitId) => {
                             const habit = habits.find(h => h.id === habitId);
-                            // Create a temporary task for the focus session based on the habit
                             const tempTask: Task = {
                                 id: `habit-${habitId}`,
                                 title: habit?.name || "Habit Focus",
@@ -537,9 +457,7 @@ const App: React.FC = () => {
                                 attachments: [],
                                 createdAt: new Date()
                             };
-                            if (!tasks.find(t => t.id === tempTask.id)) {
-                                setTasks(prev => [...prev, tempTask]);
-                            }
+                            if (!tasks.find(t => t.id === tempTask.id)) setTasks(prev => [...prev, tempTask]);
                             setFocusTaskId(tempTask.id);
                             setCurrentView(ViewType.Focus);
                         }}

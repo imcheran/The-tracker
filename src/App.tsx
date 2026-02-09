@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, Suspense, lazy, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import TaskView from './components/TaskView';
@@ -208,8 +207,27 @@ const App: React.FC = () => {
           const events = await fetchCalendarEvents(token, start, end);
           
           setTasks(prev => {
+              const existingEventsMap = new Map<string, Task>();
+              prev.forEach(t => {
+                  if (t.isEvent && t.externalId) {
+                      existingEventsMap.set(t.externalId, t);
+                  }
+              });
+
               const localTasks = prev.filter(t => !t.isEvent);
-              return [...localTasks, ...events];
+              const mergedEvents = events.map(evt => {
+                  const existing = evt.externalId ? existingEventsMap.get(evt.externalId) : null;
+                  if (existing) {
+                      return { 
+                          ...evt, 
+                          isCompleted: existing.isCompleted, 
+                          listId: existing.listId,
+                          id: existing.id
+                      };
+                  }
+                  return evt;
+              });
+              return [...localTasks, ...mergedEvents];
           });
           setLastSynced(new Date());
       } catch (error) {
