@@ -5,7 +5,8 @@ import {
   X, MoreVertical, Pin, Archive, Trash2, ChevronLeft, 
   Circle, CheckCircle2, Plus, Calendar, Flag, Tag as TagIcon, 
   Palette, Bell, Image as ImageIcon, CheckSquare, Folder,
-  Clock, Mic, PenTool, ArrowRight, CornerDownRight, Hash
+  Clock, Mic, PenTool, ArrowRight, CornerDownRight, Hash,
+  GripVertical
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import DrawingCanvas from './DrawingCanvas';
@@ -53,13 +54,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   const [showDrawing, setShowDrawing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   
-  // Child Task Creation
-  const [quickSubtaskTitle, setQuickSubtaskTitle] = useState('');
-  
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   
   const editorRef = useRef<HTMLDivElement>(null);
-  const quickSubtaskInputRef = useRef<HTMLInputElement>(null);
   
   const isDarkMode = document.documentElement.classList.contains('dark');
   const childTasks = tasks.filter(t => t.parentId === task.id && !t.isDeleted);
@@ -95,13 +92,13 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
     }
   };
 
-  const handleQuickAddSubtask = () => {
-      if (!quickSubtaskTitle.trim() || !onAddTask) return;
+  const handleAddChecklistItem = () => {
+      if (!onAddTask) return;
       
       const newChildTask: Task = {
           id: Date.now().toString(),
           parentId: task.id,
-          title: quickSubtaskTitle,
+          title: '',
           isCompleted: false,
           priority: Priority.None,
           listId: task.listId,
@@ -109,11 +106,29 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
           subtasks: [],
           attachments: [],
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          isNote: true
       };
       
       onAddTask(newChildTask);
-      setQuickSubtaskTitle('');
+      // We focus the new input automatically via autoFocus in render
+  };
+
+  const handleUpdateChildTitle = (childId: string, newTitle: string) => {
+      const child = childTasks.find(t => t.id === childId);
+      if (child) {
+          onUpdateTask({ ...child, title: newTitle });
+      }
+  };
+
+  const handleChildKeyDown = (e: React.KeyboardEvent, childId: string) => {
+      if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAddChecklistItem();
+      } else if (e.key === 'Backspace' && (e.target as HTMLInputElement).value === '') {
+          e.preventDefault();
+          onDeleteTask(childId);
+      }
   };
 
   const handleSaveDrawing = (dataUrl: string) => {
@@ -307,22 +322,19 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                   </div>
               )}
 
-              {/* Child Tasks Section */}
+              {/* Checklist / Subtasks Section */}
               <div className="pt-2 pl-2">
-                  {childTasks.length > 0 && (
-                      <div className="mb-3 pl-9">
-                          <div className="w-px h-full bg-slate-200 dark:bg-slate-800 absolute left-[2.25rem]" />
-                      </div>
-                  )}
-                  
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                       {childTasks.map(child => (
                           <div 
                             key={child.id} 
-                            onClick={() => onSelectTask && onSelectTask(child.id)}
-                            className="flex items-center gap-3 p-2 rounded-xl cursor-pointer group transition-all hover:bg-black/5 dark:hover:bg-white/5 relative"
+                            className="flex items-center gap-3 p-1 group relative"
                           >
-                              <CornerDownRight size={16} className="text-slate-300 dark:text-slate-600 ml-2" />
+                              {/* Drag Handle */}
+                              <div className="opacity-0 group-hover:opacity-30 cursor-grab active:cursor-grabbing p-1">
+                                  <GripVertical size={14} className={iconColorClass}/>
+                              </div>
+
                               <button 
                                   onClick={(e) => { e.stopPropagation(); onUpdateTask({...child, isCompleted: !child.isCompleted}); }}
                                   className={`flex-shrink-0 transition-colors ${child.isCompleted ? 'text-blue-500' : 'text-slate-400 hover:text-slate-500'}`}
@@ -330,26 +342,19 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                                   {child.isCompleted ? <CheckCircle2 size={18} className="fill-current" /> : <Circle size={18} />}
                               </button>
                               
-                              <div className="flex-1 min-w-0">
-                                  <div className={`text-sm font-medium truncate transition-all ${child.isCompleted ? 'line-through text-slate-400' : textColorClass}`}>
-                                      {child.title}
-                                  </div>
-                              </div>
+                              <input
+                                  value={child.title}
+                                  onChange={(e) => handleUpdateChildTitle(child.id, e.target.value)}
+                                  onKeyDown={(e) => handleChildKeyDown(e, child.id)}
+                                  placeholder="List item..."
+                                  className={`flex-1 bg-transparent border-none outline-none text-sm font-medium ${child.isCompleted ? 'line-through text-slate-400' : textColorClass}`}
+                              />
+
+                              <button onClick={() => onDeleteTask(child.id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity">
+                                  <X size={14} />
+                              </button>
                           </div>
                       ))}
-                  </div>
-
-                  {/* Quick Add Subtask Input */}
-                  <div className="flex items-center gap-3 py-2 mt-2 group pl-8">
-                      <Plus size={18} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                      <input 
-                          ref={quickSubtaskInputRef}
-                          value={quickSubtaskTitle}
-                          onChange={(e) => setQuickSubtaskTitle(e.target.value)}
-                          onKeyDown={(e) => { if(e.key === 'Enter') handleQuickAddSubtask(); }}
-                          placeholder="Add subtask" 
-                          className={`flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400 font-medium ${textColorClass}`} 
-                      />
                   </div>
               </div>
           </div>
@@ -358,6 +363,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
       {/* Bottom Bar (Glassmorphic) */}
       <div className="h-14 border-t border-black/5 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl relative z-20 pb-safe">
           <div className="flex items-center gap-1">
+              <button onClick={handleAddChecklistItem} className={`p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${iconColorClass}`}>
+                  <CheckSquare size={20} />
+              </button>
               <button onClick={() => setShowThemePicker(!showThemePicker)} className={`p-3 rounded-full transition-colors ${showThemePicker ? 'bg-black/10 dark:bg-white/10 text-blue-500' : iconColorClass} hover:bg-black/5 dark:hover:bg-white/5`}>
                   <Palette size={20} />
               </button>

@@ -21,6 +21,7 @@ interface HabitDetailViewProps {
   onEdit: (habit: Habit) => void;
   onDelete: (habitId: string) => void;
   onStartFocus?: () => void;
+  onOpenStats?: () => void;
 }
 
 const EMOJIS = [
@@ -32,7 +33,7 @@ const EMOJIS = [
 ];
 
 const HabitDetailView: React.FC<HabitDetailViewProps> = ({ 
-    habit, onClose, onToggleCheck, onEdit, onDelete, onStartFocus
+    habit, onClose, onToggleCheck, onEdit, onDelete, onStartFocus, onOpenStats
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showMenu, setShowMenu] = useState(false);
@@ -166,7 +167,14 @@ const HabitDetailView: React.FC<HabitDetailViewProps> = ({
       <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Check-ins Statistics</h3>
-              <button className="text-sm text-slate-400 flex items-center gap-1">More <ChevronRight size={14}/></button>
+              {onOpenStats && (
+                  <button 
+                    onClick={onOpenStats}
+                    className="text-sm text-slate-400 flex items-center gap-1 hover:text-white transition-colors"
+                  >
+                      More <ChevronRight size={14}/>
+                  </button>
+              )}
           </div>
           
           <div className="grid grid-cols-2 gap-3">

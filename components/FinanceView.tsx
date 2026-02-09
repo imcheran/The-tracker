@@ -9,7 +9,7 @@ import {
   Notebook, Gift, CircleDot, CreditCard, User, Banknote, Landmark, CircleDollarSign,
   ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, Users, Pencil, CheckCircle, Target, PiggyBank, Briefcase, Car, Home,
   Calendar, RotateCw, Play, Pause, ExternalLink, BarChart3, Clock, Download, FileText, Smartphone, Monitor, ShoppingCart, Coffee,
-  Heart, Users2, Split, BarChart2, Eye, Activity, Percent
+  Heart, Users2, Split, BarChart2, Eye, Activity, Percent, ChevronDown
 } from 'lucide-react';
 import { 
   format, isWithinInterval, isToday, eachDayOfInterval, 
@@ -531,7 +531,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           
           {/* Workspace Toggle */}
           <div className="flex justify-center mb-2">
-              <div className="bg-slate-100 dark:bg-slate-800 p-1 rounded-full flex relative">
+              <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-full flex relative shadow-inner">
                   <button 
                       onClick={() => setWorkspaceMode('personal')}
                       className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all z-10 ${workspaceMode === 'personal' ? 'text-white' : 'text-slate-500'}`}
@@ -545,23 +545,40 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                       <Heart size={10} fill="currentColor" />
                       Joint
                   </button>
-                  <div className={`absolute top-1 bottom-1 w-[50%] bg-blue-600 rounded-full transition-transform duration-300 ${workspaceMode === 'joint' ? 'translate-x-full' : 'translate-x-0'}`} />
+                  <div className={`absolute top-1 bottom-1 w-[50%] bg-indigo-600 rounded-full transition-transform duration-300 ${workspaceMode === 'joint' ? 'translate-x-full' : 'translate-x-0'}`} />
               </div>
           </div>
 
-          {/* Cards Row */}
-          <div className="min-w-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-3xl shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+          {/* Premium Card */}
+          <div className="relative overflow-hidden rounded-[32px] p-8 text-white shadow-2xl shadow-indigo-500/30 transition-all hover:scale-[1.01] duration-500 group">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-700"></div>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-white/15 transition-colors"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10"></div>
+              
               <div className="relative z-10">
-                  <div className="text-blue-100 text-xs font-bold mb-1 uppercase tracking-wider">Total Balance</div>
-                  <div className="text-3xl font-black mb-6">{formatCurrency(stats.balance)}</div>
-                  <div className="flex gap-8">
+                  <div className="flex justify-between items-start mb-8">
                       <div>
-                          <div className="flex items-center gap-1 text-blue-200 text-xs mb-1"><ArrowDownCircle size={14}/> Income</div>
+                          <div className="text-indigo-100/80 text-xs font-bold uppercase tracking-widest mb-1">Total Balance</div>
+                          <div className="text-4xl font-black tracking-tight drop-shadow-sm">{formatCurrency(stats.balance)}</div>
+                      </div>
+                      <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg">
+                          <Wallet size={24} className="text-white" />
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-emerald-500/20 backdrop-blur-sm rounded-2xl p-3 border border-emerald-500/20">
+                          <div className="flex items-center gap-1.5 text-emerald-100 text-[10px] font-bold uppercase mb-1">
+                              <div className="p-1 bg-emerald-500 rounded-full"><ArrowDownCircle size={10} /></div>
+                              Income
+                          </div>
                           <div className="font-bold text-lg">{formatCurrency(stats.income)}</div>
                       </div>
-                      <div>
-                          <div className="flex items-center gap-1 text-blue-200 text-xs mb-1"><ArrowUpCircle size={14}/> Expense</div>
+                      <div className="bg-rose-500/20 backdrop-blur-sm rounded-2xl p-3 border border-rose-500/20">
+                          <div className="flex items-center gap-1.5 text-rose-100 text-[10px] font-bold uppercase mb-1">
+                              <div className="p-1 bg-rose-500 rounded-full"><ArrowUpCircle size={10} /></div>
+                              Expense
+                          </div>
                           <div className="font-bold text-lg">{formatCurrency(stats.expense)}</div>
                       </div>
                   </div>
@@ -581,11 +598,11 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           <div className="p-4 space-y-4 pb-24">
               {/* Summary Cards */}
               <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-[24px] border border-emerald-100 dark:border-emerald-800">
                       <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">To Receive</span>
                       <div className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{formatCurrency(totalLent)}</div>
                   </div>
-                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl border border-red-100 dark:border-red-800">
+                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-[24px] border border-red-100 dark:border-red-800">
                       <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase">To Pay</span>
                       <div className="text-xl font-black text-red-700 dark:text-red-300 mt-1">{formatCurrency(totalBorrowed)}</div>
                   </div>
@@ -593,7 +610,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
               {/* Debtors Horizontal List */}
               <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                  <button onClick={() => setShowDebtorModal(true)} className="flex-shrink-0 w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center gap-1 text-slate-400">
+                  <button onClick={() => setShowDebtorModal(true)} className="flex-shrink-0 w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center gap-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                       <Plus size={20} />
                       <span className="text-[9px] font-bold">Add</span>
                   </button>
@@ -601,7 +618,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                       <div 
                           key={d.id} 
                           onClick={() => setSelectedDebtorId(selectedDebtorId === d.id ? null : d.id)}
-                          className={`flex-shrink-0 w-16 h-16 rounded-full flex flex-col items-center justify-center p-1 border-2 transition-all cursor-pointer ${selectedDebtorId === d.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-transparent bg-white dark:bg-slate-800 shadow-sm'}`}
+                          className={`flex-shrink-0 w-16 h-16 rounded-full flex flex-col items-center justify-center p-1 border-2 transition-all cursor-pointer ${selectedDebtorId === d.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-md transform scale-105' : 'border-transparent bg-white dark:bg-slate-800 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                       >
                           <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-lg">{d.icon ? <span className="text-xl">👤</span> : <User size={16}/>}</div>
                           <span className="text-[9px] font-bold text-slate-600 dark:text-slate-300 truncate w-full text-center mt-1">{d.name}</span>
@@ -611,10 +628,10 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
               {/* Debts List */}
               <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                      <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase">Records</h3>
+                  <div className="flex justify-between items-center px-1">
+                      <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Records</h3>
                       {selectedDebtorId && (
-                          <button onClick={() => setShowDebtModal(true)} className="text-xs font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full">
+                          <button onClick={() => setShowDebtModal(true)} className="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
                               + New Record
                           </button>
                       )}
@@ -623,9 +640,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                       <div className="text-center py-10 text-slate-400 text-sm">No records found. Select a debtor to add one.</div>
                   ) : (
                       debtorDebts.map(debt => (
-                          <div key={debt.id} onClick={() => { setEditingDebt(debt); setSelectedDebtorId(debt.debtorId); }} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm">
+                          <div key={debt.id} onClick={() => { setEditingDebt(debt); setSelectedDebtorId(debt.debtorId); }} className="bg-white dark:bg-slate-900 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm hover:shadow-md transition-all cursor-pointer group">
                               <div className="flex items-center gap-3">
-                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${debt.type === 'Lend' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${debt.type === 'Lend' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400'}`}>
                                       {debt.type === 'Lend' ? <ArrowUpCircle size={20}/> : <ArrowDownCircle size={20}/>}
                                   </div>
                                   <div>
@@ -633,7 +650,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                                       <div className="text-xs text-slate-400">{format(new Date(debt.date), 'MMM d, yyyy')} • {debtors.find(d => d.id === debt.debtorId)?.name}</div>
                                   </div>
                               </div>
-                              <span className={`font-bold ${debt.type === 'Lend' ? 'text-emerald-600' : 'text-red-600'}`}>
+                              <span className={`font-bold ${debt.type === 'Lend' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                                   {formatCurrency(debt.amount)}
                               </span>
                           </div>
@@ -646,9 +663,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
   const renderGoals = () => (
       <div className="p-4 space-y-4 pb-24">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-2 px-1">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">Savings Goals</h3>
-              <button onClick={() => setShowGoalModal(true)} className="p-2 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-500/30">
+              <button onClick={() => setShowGoalModal(true)} className="p-2 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-colors">
                   <Plus size={20}/>
               </button>
           </div>
@@ -657,26 +674,26 @@ const FinanceView: React.FC<FinanceViewProps> = ({
               {goals.map(goal => {
                   const progress = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
                   return (
-                      <div key={goal.id} onClick={() => setEditingGoal(goal)} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-md transition-all cursor-pointer">
-                          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-                              <div className="w-20 h-20 rounded-full" style={{ backgroundColor: goal.color }} />
+                      <div key={goal.id} onClick={() => setEditingGoal(goal)} className="bg-white dark:bg-slate-900 p-4 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer">
+                          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                              <div className="w-20 h-20 rounded-full blur-xl" style={{ backgroundColor: goal.color }} />
                           </div>
                           <div className="relative z-10">
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-white shadow-sm" style={{ backgroundColor: goal.color }}>
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-white shadow-md" style={{ backgroundColor: goal.color }}>
                                   <Target size={20} />
                               </div>
                               <div className="font-bold text-slate-800 dark:text-white mb-1">{goal.name}</div>
-                              <div className="text-xs text-slate-500 dark:text-slate-400 mb-4">{formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}</div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-medium">{formatCurrency(goal.currentAmount)} / {formatCurrency(goal.targetAmount)}</div>
                               
                               <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%`, backgroundColor: goal.color }} />
+                                  <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${progress}%`, backgroundColor: goal.color }} />
                               </div>
                               <div className="mt-2 text-[10px] font-bold text-slate-400 text-right">{progress}%</div>
                           </div>
                       </div>
                   );
               })}
-              <button onClick={() => setShowGoalModal(true)} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[160px]">
+              <button onClick={() => setShowGoalModal(true)} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all min-h-[160px]">
                   <Plus size={32} />
                   <span className="text-xs font-bold">New Goal</span>
               </button>
@@ -691,7 +708,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
       return (
           <div className="p-4 space-y-6 pb-24">
-              <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-3xl shadow-xl relative overflow-hidden">
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-[32px] shadow-xl relative overflow-hidden border border-white/10">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
                   <div className="relative z-10">
                       <div className="text-slate-400 text-xs font-bold mb-1 uppercase tracking-wider">Monthly Recurring</div>
@@ -699,9 +716,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                   </div>
               </div>
 
-              <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase">Active Subscriptions</h3>
-                  <button onClick={() => setShowSubModal(true)} className="text-xs font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full">
+              <div className="flex justify-between items-center px-1">
+                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Active Subscriptions</h3>
+                  <button onClick={() => setShowSubModal(true)} className="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
                       + Add New
                   </button>
               </div>
@@ -712,18 +729,18 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                       const daysLeft = differenceInDays(nextDate, new Date());
                       
                       return (
-                          <div key={sub.id} onClick={() => setEditingSubscription(sub)} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm group hover:border-blue-200 transition-all cursor-pointer">
+                          <div key={sub.id} onClick={() => setEditingSubscription(sub)} className="bg-white dark:bg-slate-900 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm group hover:border-indigo-200 dark:hover:border-indigo-800 transition-all cursor-pointer">
                               <div className="flex items-center gap-4">
                                   {sub.url ? (
-                                      <img src={`https://www.google.com/s2/favicons?domain=${sub.url}&sz=64`} alt="logo" className="w-10 h-10 rounded-xl bg-white p-1 object-contain shadow-sm border border-slate-100" />
+                                      <img src={`https://www.google.com/s2/favicons?domain=${sub.url}&sz=64`} alt="logo" className="w-12 h-12 rounded-xl bg-white p-1 object-contain shadow-sm border border-slate-100" />
                                   ) : (
-                                      <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-lg">
+                                      <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">
                                           {sub.name.charAt(0)}
                                       </div>
                                   )}
                                   <div>
                                       <div className="font-bold text-slate-800 dark:text-white text-sm">{sub.name}</div>
-                                      <div className="text-xs text-slate-400">{sub.period} • Next in {daysLeft} days</div>
+                                      <div className="text-xs text-slate-400 mt-0.5">{sub.period} • Next in <span className={daysLeft <= 3 ? 'text-red-500 font-bold' : ''}>{daysLeft} days</span></div>
                                   </div>
                               </div>
                               <div className="text-right">
@@ -746,12 +763,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
       return (
           <div className="p-4 space-y-6 pb-24">
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-800">
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] shadow-xl border border-slate-100 dark:border-slate-800">
                   <div className="text-slate-400 text-xs font-bold mb-1 uppercase tracking-wider">Portfolio Value</div>
                   <div className="flex items-end gap-3 mb-4">
                       <div className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(currentValue)}</div>
-                      <div className={`text-sm font-bold mb-1.5 flex items-center gap-1 ${pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {pnl >= 0 ? <TrendingUp size={16}/> : <TrendingDown size={16}/>}
+                      <div className={`text-sm font-bold mb-1.5 flex items-center gap-1 px-2 py-0.5 rounded-lg ${pnl >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'}`}>
+                          {pnl >= 0 ? <TrendingUp size={14}/> : <TrendingDown size={14}/>}
                           {Math.abs(pnlPercent).toFixed(2)}%
                       </div>
                   </div>
@@ -767,9 +784,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                   </div>
               </div>
 
-              <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase">Assets</h3>
-                  <button onClick={() => setShowInvModal(true)} className="text-xs font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full">
+              <div className="flex justify-between items-center px-1">
+                  <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Assets</h3>
+                  <button onClick={() => setShowInvModal(true)} className="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors">
                       + Add Asset
                   </button>
               </div>
@@ -779,14 +796,14 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                       const current = inv.units * (inv.currentPrice || inv.avgPrice);
                       const gain = current - (inv.units * inv.avgPrice);
                       return (
-                          <div key={inv.id} onClick={() => setEditingInvestment(inv)} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:border-blue-200 transition-all">
+                          <div key={inv.id} onClick={() => setEditingInvestment(inv)} className="bg-white dark:bg-slate-900 p-4 rounded-[24px] border border-slate-100 dark:border-slate-800 flex items-center justify-between shadow-sm cursor-pointer hover:border-indigo-200 dark:hover:border-indigo-800 transition-all">
                               <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 font-bold text-xs">
+                                  <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 font-bold text-xs shadow-sm">
                                       {inv.type.substring(0,2).toUpperCase()}
                                   </div>
                                   <div>
                                       <div className="font-bold text-slate-800 dark:text-white text-sm">{inv.name}</div>
-                                      <div className="text-xs text-slate-400">{inv.units} units @ {formatCurrency(inv.avgPrice)}</div>
+                                      <div className="text-xs text-slate-400 mt-0.5">{inv.units} units @ {formatCurrency(inv.avgPrice)}</div>
                                   </div>
                               </div>
                               <div className="text-right">
@@ -804,9 +821,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
         {/* Header */}
-        <div className="pt-safe bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 shrink-0 sticky top-0 z-20">
+        <div className="pt-safe bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shrink-0 sticky top-0 z-20">
             <div className="h-16 flex items-center justify-between px-4">
                 <div className="flex items-center gap-3">
                     {onMenuClick && (
@@ -814,31 +831,31 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                             <Menu size={20}/>
                         </button>
                     )}
-                    <h1 className="text-xl font-bold text-slate-800 dark:text-white">Finance</h1>
+                    <h1 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">Finance</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     {Capacitor.isNativePlatform() && (
                         <button 
                             onClick={() => handleSyncSms()} 
                             disabled={isSyncingSms}
-                            className={`p-2 rounded-full transition-colors ${isSyncingSms ? 'bg-blue-50 text-blue-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                            className={`p-2 rounded-full transition-colors ${isSyncingSms ? 'bg-indigo-50 text-indigo-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                         >
                             <RefreshCw size={20} className={isSyncingSms ? "animate-spin" : ""} />
                         </button>
                     )}
-                    <button onClick={() => setShowInput(true)} className="p-2 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all active:scale-95">
+                    <button onClick={() => setShowInput(true)} className="p-2 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-all active:scale-95">
                         <Plus size={20}/>
                     </button>
                 </div>
             </div>
             
             {/* Tabs */}
-            <div className="px-4 pb-2 overflow-x-auto no-scrollbar flex gap-4">
+            <div className="px-4 pb-3 overflow-x-auto no-scrollbar flex gap-2">
                 {(['overview', 'transactions', 'debts', 'goals', 'subscriptions', 'investments'] as const).map(tab => (
                     <button 
                         key={tab} 
                         onClick={() => setActiveTab(tab)} 
-                        className={`pb-2 text-sm font-bold capitalize transition-colors whitespace-nowrap border-b-2 ${activeTab === tab ? 'text-blue-600 border-blue-600 dark:text-blue-400' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                        className={`px-4 py-1.5 text-xs font-bold capitalize transition-all rounded-full border ${activeTab === tab ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-md' : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800'}`}
                     >
                         {tab}
                     </button>
@@ -849,32 +866,33 @@ const FinanceView: React.FC<FinanceViewProps> = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
             {activeTab === 'overview' && renderOverview()}
             {activeTab === 'transactions' && (
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-6">
                     {groupedTransactions.map(([date, txns]) => (
                         <div key={date}>
-                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-2 sticky top-0 bg-slate-50 dark:bg-slate-950 py-1">{format(parseISO(date), 'EEE, MMM d')}</h3>
-                            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 px-1">{format(parseISO(date), 'EEEE, MMM d')}</h3>
+                            <div className="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
                                 {txns.map((t, i) => (
                                     <div key={t.id} onClick={() => setEditingTransaction(t)} className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${i !== txns.length - 1 ? 'border-b border-slate-50 dark:border-slate-800' : ''}`}>
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+                                            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm border border-slate-100 dark:border-slate-700">
                                                 {/* Category Icon */}
                                                 {(() => {
                                                     const cat = normalizeCategory(t.category);
                                                     const iconKey = DEFAULT_CATEGORIES.find(c => c.name === cat)?.icon || 'circle-dot';
+                                                    const color = DEFAULT_CATEGORIES.find(c => c.name === cat)?.color || '#94a3b8';
                                                     const IconComp = ICON_MAP[iconKey] || CircleDot;
-                                                    return <IconComp size={18} />;
+                                                    return <IconComp size={20} style={{ color }} />;
                                                 })()}
                                             </div>
                                             <div>
-                                                <div className="font-bold text-slate-800 dark:text-white text-sm">{t.merchant}</div>
-                                                <div className="text-xs text-slate-400 flex items-center gap-1">
+                                                <div className="font-bold text-slate-800 dark:text-white text-sm mb-0.5">{t.merchant}</div>
+                                                <div className="text-xs text-slate-400 flex items-center gap-1 font-medium">
                                                     {t.category} 
-                                                    {t.isShared && <Users size={10} className="text-purple-500"/>}
+                                                    {t.isShared && <Users size={12} className="text-purple-500 ml-1"/>}
                                                 </div>
                                             </div>
                                         </div>
-                                        <span className={`font-bold text-sm ${t.type === 'credit' ? 'text-emerald-500' : 'text-slate-900 dark:text-white'}`}>
+                                        <span className={`font-bold text-sm ${t.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
                                             {t.type === 'credit' ? '+' : '-'}{formatCurrency(t.amount)}
                                         </span>
                                     </div>
@@ -892,46 +910,49 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
         {/* Add Transaction Modal */}
         {showInput && (
-            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in" onClick={() => setShowInput(false)}>
-                <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom border border-slate-100 dark:border-slate-800" onClick={e => e.stopPropagation()}>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{editingTransaction ? 'Edit Transaction' : 'New Transaction'}</h3>
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md flex items-end sm:items-center justify-center p-4 animate-in fade-in" onClick={() => setShowInput(false)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[32px] p-6 shadow-2xl animate-in slide-in-from-bottom border border-slate-100 dark:border-slate-800" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white">{editingTransaction ? 'Edit Transaction' : 'New Transaction'}</h3>
+                        <button onClick={() => setShowInput(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"><X size={20}/></button>
+                    </div>
                     
                     {/* Amount Input */}
-                    <div className="mb-6">
-                        <label className="text-xs font-bold text-slate-400 uppercase">Amount</label>
-                        <div className="flex items-center gap-2 border-b-2 border-blue-500 py-2">
-                            <span className="text-2xl font-bold text-blue-500">{currency.symbol}</span>
+                    <div className="mb-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-100 dark:border-slate-800">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Amount</label>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="text-3xl font-bold text-indigo-500">{currency.symbol}</span>
                             <input 
                                 type="number" 
                                 value={amount} 
                                 onChange={(e) => setAmount(e.target.value)} 
-                                className="w-full text-3xl font-black bg-transparent outline-none text-slate-900 dark:text-white placeholder-slate-300"
-                                placeholder="0.00"
+                                className="w-full text-4xl font-black bg-transparent outline-none text-slate-900 dark:text-white placeholder-slate-300"
+                                placeholder="0"
                                 autoFocus
                             />
                         </div>
                     </div>
 
                     {/* Type Selector */}
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-4">
-                        <button onClick={() => setType('debit')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${type === 'debit' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500'}`}>Expense</button>
-                        <button onClick={() => setType('credit')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${type === 'credit' ? 'bg-white dark:bg-slate-700 text-emerald-500 shadow-sm' : 'text-slate-500'}`}>Income</button>
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl mb-6">
+                        <button onClick={() => setType('debit')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${type === 'debit' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Expense</button>
+                        <button onClick={() => setType('credit')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${type === 'credit' ? 'bg-white dark:bg-slate-700 text-emerald-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Income</button>
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-xs font-bold text-slate-400 uppercase">Merchant</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase ml-1">Merchant</label>
                             <input 
                                 value={merchant} 
                                 onChange={(e) => setMerchant(e.target.value)} 
-                                className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl mt-1 text-sm font-medium outline-none"
+                                className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-1 text-base font-bold outline-none border border-transparent focus:border-indigo-500 transition-colors dark:text-white"
                                 placeholder="Where did you spend?"
                             />
                             {/* Suggestions */}
                             {merchantSuggestions.length > 0 && (
-                                <div className="flex gap-2 mt-2 overflow-x-auto no-scrollbar">
+                                <div className="flex gap-2 mt-2 overflow-x-auto no-scrollbar pb-1">
                                     {merchantSuggestions.map(s => (
-                                        <button key={s} onClick={() => setMerchant(s)} className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-slate-600 dark:text-slate-300 whitespace-nowrap">{s}</button>
+                                        <button key={s} onClick={() => setMerchant(s)} className="text-xs bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 whitespace-nowrap hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors font-bold">{s}</button>
                                     ))}
                                 </div>
                             )}
@@ -939,45 +960,53 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase">Category</label>
-                                <select 
-                                    value={category} 
-                                    onChange={(e) => setCategory(e.target.value)}
-                                    className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl mt-1 text-sm font-medium outline-none appearance-none"
-                                >
-                                    {Object.entries(GROUPED_CATEGORIES).map(([group, cats]) => (
-                                        <optgroup key={group} label={group}>
-                                            {cats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                                        </optgroup>
-                                    ))}
-                                </select>
+                                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Category</label>
+                                <div className="relative">
+                                    <select 
+                                        value={category} 
+                                        onChange={(e) => setCategory(e.target.value)}
+                                        className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-1 text-sm font-bold outline-none appearance-none border border-transparent focus:border-indigo-500 transition-colors dark:text-white"
+                                    >
+                                        {Object.entries(GROUPED_CATEGORIES).map(([group, cats]) => (
+                                            <optgroup key={group} label={group}>
+                                                {cats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                                            </optgroup>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 mt-0.5">
+                                        <ChevronDown size={16} />
+                                    </div>
+                                </div>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase">Date</label>
+                                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Date</label>
                                 <input 
                                     type="date"
                                     value={entryDate} 
                                     onChange={(e) => setEntryDate(e.target.value)} 
-                                    className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl mt-1 text-sm font-medium outline-none"
+                                    className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-1 text-sm font-bold outline-none border border-transparent focus:border-indigo-500 transition-colors dark:text-white"
                                 />
                             </div>
                         </div>
 
                         {workspaceMode === 'joint' && (
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsSharedTransaction(!isSharedTransaction)}>
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSharedTransaction ? 'bg-purple-500 border-purple-500' : 'border-slate-300'}`}>
-                                    {isSharedTransaction && <Check size={14} className="text-white"/>}
+                            <div 
+                                className={`flex items-center gap-3 p-4 rounded-2xl border transition-colors cursor-pointer ${isSharedTransaction ? 'bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800' : 'border-slate-100 dark:border-slate-800'}`}
+                                onClick={() => setIsSharedTransaction(!isSharedTransaction)}
+                            >
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${isSharedTransaction ? 'bg-purple-500 border-purple-500 text-white' : 'border-slate-300'}`}>
+                                    {isSharedTransaction && <Check size={14} strokeWidth={3} />}
                                 </div>
-                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Share with Partner</span>
+                                <span className={`text-sm font-bold ${isSharedTransaction ? 'text-purple-700 dark:text-purple-300' : 'text-slate-600 dark:text-slate-400'}`}>Share with Partner</span>
                             </div>
                         )}
                     </div>
 
-                    <button onClick={handleManualSubmit} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold mt-6 hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
+                    <button onClick={handleManualSubmit} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold mt-8 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 active:scale-[0.98]">
                         {editingTransaction ? 'Save Changes' : 'Add Transaction'}
                     </button>
                     {editingTransaction && (
-                        <button onClick={() => { onDeleteTransaction(editingTransaction.id); setShowInput(false); }} className="w-full text-red-500 font-bold py-3 mt-2 text-sm">Delete</button>
+                        <button onClick={() => { onDeleteTransaction(editingTransaction.id); setShowInput(false); }} className="w-full text-red-500 font-bold py-3 mt-2 text-sm hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-colors">Delete Transaction</button>
                     )}
                 </div>
             </div>

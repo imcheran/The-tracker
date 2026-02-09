@@ -50,17 +50,17 @@ const BentoTaskCard: React.FC<BentoTaskCardProps> = ({ task, onToggle, onSelect,
         return (
             <div 
                 onClick={onSelect}
-                className="group relative bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border border-blue-100 dark:border-blue-800 p-5 rounded-[24px] bento-card cursor-pointer overflow-hidden flex flex-col justify-between min-h-[140px]"
+                className="group relative bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 border border-indigo-100 dark:border-indigo-800/50 p-5 rounded-[24px] bento-card cursor-pointer overflow-hidden flex flex-col justify-between min-h-[140px] shadow-sm hover:shadow-indigo-500/10 transition-all duration-300"
             >
-                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="bg-white/50 dark:bg-black/20 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-500 transition-colors">
+                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="bg-white/80 dark:bg-black/40 backdrop-blur-sm p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-500 transition-colors shadow-sm">
                         <Trash2 size={16} />
                     </button>
                 </div>
                 
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <div className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 p-1.5 rounded-lg">
+                <div className="relative z-0">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 p-1.5 rounded-lg">
                             <Calendar size={16} />
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Event</span>
@@ -70,7 +70,7 @@ const BentoTaskCard: React.FC<BentoTaskCardProps> = ({ task, onToggle, onSelect,
 
                 <div className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
                     {task.dueDate && (
-                        <div className="bg-white/60 dark:bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        <div className="bg-white/60 dark:bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-indigo-100/50 dark:border-white/5">
                             {isToday(new Date(task.dueDate)) ? 'Today' : format(new Date(task.dueDate), 'MMM d')}
                             {!task.isAllDay && ` • ${format(new Date(task.dueDate), 'h:mm a')}`}
                         </div>
@@ -80,18 +80,18 @@ const BentoTaskCard: React.FC<BentoTaskCardProps> = ({ task, onToggle, onSelect,
         );
     }
 
-    // Standard Task Card
-    const priorityColors = {
-        [Priority.High]: 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30',
-        [Priority.Medium]: 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30',
-        [Priority.Low]: 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30',
-        [Priority.None]: 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+    // Standard Task Card with Premium Gradients
+    const priorityStyles = {
+        [Priority.High]: 'bg-gradient-to-br from-red-50 to-white dark:from-red-900/20 dark:to-slate-900 border-red-100 dark:border-red-900/30 shadow-red-500/5',
+        [Priority.Medium]: 'bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900 border-amber-100 dark:border-amber-900/30 shadow-amber-500/5',
+        [Priority.Low]: 'bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-slate-900 border-blue-100 dark:border-blue-900/30 shadow-blue-500/5',
+        [Priority.None]: 'bg-gradient-to-br from-white to-slate-50 dark:from-slate-800/50 dark:to-slate-900 border-slate-100 dark:border-slate-800'
     };
 
     return (
         <div 
             onClick={onSelect}
-            className={`group relative p-5 rounded-[24px] border transition-all duration-300 bento-card cursor-pointer flex flex-col justify-between min-h-[120px] ${priorityColors[task.priority]} ${task.isCompleted ? 'opacity-60 grayscale' : ''}`}
+            className={`group relative p-5 rounded-[24px] border transition-all duration-300 bento-card cursor-pointer flex flex-col justify-between min-h-[120px] shadow-sm hover:shadow-lg hover:-translate-y-1 ${priorityStyles[task.priority]} ${task.isCompleted ? 'opacity-60 grayscale' : ''}`}
         >
             <div className="flex items-start justify-between gap-3">
                 <h3 className={`text-base font-semibold leading-snug ${task.isCompleted ? 'line-through text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>
@@ -99,7 +99,7 @@ const BentoTaskCard: React.FC<BentoTaskCardProps> = ({ task, onToggle, onSelect,
                 </h3>
                 <button 
                     onClick={(e) => { e.stopPropagation(); onToggle(); }}
-                    className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${task.isCompleted ? 'bg-slate-400 border-slate-400 text-white' : 'border-slate-300 hover:border-blue-500'}`}
+                    className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shadow-sm ${task.isCompleted ? 'bg-slate-400 border-slate-400 text-white' : 'border-slate-300 hover:border-blue-500 bg-white dark:bg-transparent'}`}
                 >
                     {task.isCompleted && <Check size={14} strokeWidth={3} />}
                 </button>
@@ -107,14 +107,14 @@ const BentoTaskCard: React.FC<BentoTaskCardProps> = ({ task, onToggle, onSelect,
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
                 {task.dueDate && (
-                    <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                    <div className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg ${isOverdue ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300' : 'bg-white/80 dark:bg-white/10 text-slate-500 dark:text-slate-400'}`}>
                         <Calendar size={12} />
                         <span>{format(new Date(task.dueDate), 'MMM d')}</span>
                     </div>
                 )}
                 
                 {task.tags.map(tag => (
-                    <span key={tag} className="text-[10px] font-bold bg-white/50 dark:bg-white/10 px-2 py-1 rounded-lg text-slate-500 dark:text-slate-400">#{tag}</span>
+                    <span key={tag} className="text-[10px] font-bold bg-white/80 dark:bg-white/10 px-2.5 py-1.5 rounded-lg text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-transparent">#{tag}</span>
                 ))}
             </div>
         </div>
@@ -156,8 +156,8 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
             onMouseDown={handleTouchStart}
             onMouseUp={handleTouchEnd}
             className={`
-                break-inside-avoid mb-3 rounded-[24px] overflow-hidden cursor-pointer flex flex-col group relative transition-all duration-300 hover:shadow-lg
-                ${isSelected ? 'ring-4 ring-slate-800/20 dark:ring-white/20 scale-95' : 'hover:-translate-y-1'}
+                break-inside-avoid mb-3 rounded-[24px] overflow-hidden cursor-pointer flex flex-col group relative transition-all duration-300
+                ${isSelected ? 'ring-4 ring-blue-500 shadow-xl scale-95 z-10' : 'hover:-translate-y-1 hover:shadow-lg'}
                 ${!hasCustomBg ? 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' : 'border border-black/5'}
             `}
             style={{ 
@@ -166,7 +166,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
         >
             {/* Selection Checkmark */}
             {isSelected && (
-                <div className="absolute top-3 right-3 z-30 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full p-1 animate-scale-in">
+                <div className="absolute top-3 right-3 z-30 bg-blue-500 text-white rounded-full p-1 shadow-md animate-scale-in">
                     <Check size={14} strokeWidth={3} />
                 </div>
             )}
@@ -180,6 +180,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
             {imageAttachment && (
                 <div className="w-full relative z-10 h-32 overflow-hidden">
                     <img src={imageAttachment.url} alt="attachment" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 </div>
             )}
             
@@ -361,16 +362,16 @@ const TaskView: React.FC<TaskViewProps> = ({
   const currentList = lists.find(l => l.id === viewType);
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden">
+    <div className="h-full flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors">
         {/* Header - Bento Style */}
         <div className="pt-safe shrink-0 sticky top-0 z-20 pointer-events-none px-4 md:px-6 pt-4">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-[24px] flex items-center justify-between p-4 pointer-events-auto">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-sm rounded-[24px] flex items-center justify-between p-4 pointer-events-auto">
                 <div className="flex items-center gap-4">
                     <button onClick={onMenuClick} className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors md:hidden">
                         <Menu size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-black text-slate-800 dark:text-white leading-none">
+                        <h1 className="text-xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
                             {getHeaderTitle()}
                         </h1>
                         <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wide">
@@ -419,7 +420,7 @@ const TaskView: React.FC<TaskViewProps> = ({
         <div className={`flex-1 overflow-y-auto custom-scrollbar pb-32 px-4 md:px-6 pt-4`}>
             {filteredTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-                    <div className="w-40 h-40 mb-6 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center animate-pulse">
+                    <div className="w-40 h-40 mb-6 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center animate-pulse shadow-sm">
                         {isNotesView ? <Notebook size={64} className="text-slate-300 dark:text-slate-600"/> : <Inbox size={64} className="text-slate-300 dark:text-slate-600"/>}
                     </div>
                     <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200">All caught up!</h3>
@@ -462,8 +463,6 @@ const TaskView: React.FC<TaskViewProps> = ({
                 <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 p-2 rounded-[24px] shadow-2xl flex items-center gap-1 pointer-events-auto">
                     <div className="flex gap-1 pr-2">
                         <button onClick={() => createBlankNote('list')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><CheckSquare size={20} /></button>
-                        <button onClick={() => createBlankNote('drawing')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><Brush size={20} /></button>
-                        <button onClick={() => createBlankNote('voice')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><Mic size={20} /></button>
                         <button onClick={() => createBlankNote('image')} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 transition-colors"><ImageIcon size={20} /></button>
                     </div>
                     <button 

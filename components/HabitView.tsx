@@ -35,15 +35,15 @@ const HabitCard: React.FC<{
         <div 
             onClick={onClick}
             className={`
-                relative aspect-square p-4 rounded-[28px] border transition-all duration-300 cursor-pointer flex flex-col justify-between group bento-card overflow-hidden
+                relative aspect-square p-4 rounded-[28px] border transition-all duration-500 cursor-pointer flex flex-col justify-between group bento-card overflow-hidden
                 ${isCompleted 
-                    ? 'border-transparent text-white shadow-lg' 
-                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+                    ? 'border-transparent text-white shadow-xl scale-[1.02]' 
+                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-emerald-200'
                 }
             `}
             style={{ 
                 backgroundColor: isCompleted ? habit.color : undefined,
-                boxShadow: isCompleted ? `0 10px 30px -10px ${habit.color}80` : undefined
+                boxShadow: isCompleted ? `0 10px 40px -10px ${habit.color}80` : undefined
             }}
         >
             {/* Background Icon (Decorative) */}
@@ -51,24 +51,27 @@ const HabitCard: React.FC<{
                 {habit.icon}
             </div>
 
-            <div className="flex justify-between items-start z-10">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-colors ${isCompleted ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800'}`}>
+            {/* Glowing Effect for Completed */}
+            {isCompleted && <div className="absolute inset-0 bg-white/20 blur-xl opacity-50 rounded-full" />}
+
+            <div className="flex justify-between items-start z-10 relative">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-colors ${isCompleted ? 'bg-white/20 text-white backdrop-blur-sm shadow-inner' : 'bg-slate-100 dark:bg-slate-800'}`}>
                     {habit.icon}
                 </div>
                 <button 
                     onClick={(e) => { e.stopPropagation(); onToggle(); }}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 active:scale-90 ${isCompleted ? 'bg-white text-current border-white' : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'}`}
+                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 active:scale-90 ${isCompleted ? 'bg-white text-current border-white shadow-lg' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-400 bg-white dark:bg-slate-800'}`}
                     style={{ color: isCompleted ? habit.color : undefined }}
                 >
-                    {isCompleted && <Check size={16} strokeWidth={4} />}
+                    {isCompleted && <Check size={20} strokeWidth={4} />}
                 </button>
             </div>
 
-            <div className="z-10">
-                <h3 className={`font-bold text-lg leading-tight mb-1 truncate ${isCompleted ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+            <div className="z-10 relative">
+                <h3 className={`font-bold text-lg leading-tight mb-1 truncate ${isCompleted ? 'text-white drop-shadow-md' : 'text-slate-800 dark:text-slate-100'}`}>
                     {habit.name}
                 </h3>
-                <div className={`text-xs font-bold ${isCompleted ? 'text-white/80' : 'text-slate-400'}`}>
+                <div className={`text-xs font-bold ${isCompleted ? 'text-white/90' : 'text-slate-400'}`}>
                     {streak} Day Streak
                 </div>
             </div>
@@ -125,33 +128,34 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
               onEdit={onUpdateHabit}
               onDelete={onDeleteHabit}
               onStartFocus={() => onStartFocus && onStartFocus(selectedHabit.id)}
+              onOpenStats={onOpenStats}
           />
       );
   }
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden">
+    <div className="h-full flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950">
         
         {/* Header - Safe Area Wrapper */}
         <div className="pt-safe shrink-0 px-4 pt-4 z-20">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-[24px] p-4 flex flex-col gap-4">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-sm rounded-[32px] p-5 flex flex-col gap-5">
                 <div className="flex justify-between items-center">
                     <div className="flex flex-col">
                         <div className="flex items-center gap-2">
-                            <button onClick={onMenuClick} className="md:hidden p-2 -ml-2 text-slate-500 rounded-full">
+                            <button onClick={onMenuClick} className="md:hidden p-2 -ml-2 text-slate-500 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                                 <Menu size={24}/>
                             </button>
-                            <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{greeting}</h1>
+                            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{greeting}</h1>
                         </div>
-                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Keep up the momentum.</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Keep up the momentum</p>
                     </div>
-                    <button onClick={onOpenStats} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform">
+                    <button onClick={onOpenStats} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform shadow-sm">
                         <ArrowRight size={20} />
                     </button>
                 </div>
 
                 {/* Calendar Strip */}
-                <div className="flex justify-between items-center bg-slate-100/50 dark:bg-slate-800/50 p-1.5 rounded-2xl">
+                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-1.5 rounded-2xl">
                     {calendarDays.map(day => {
                         const isSelected = isSameDay(day, selectedDate);
                         const isTodayDate = isToday(day);
@@ -162,14 +166,14 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
                                 className={`
                                     flex flex-col items-center justify-center flex-1 h-14 rounded-xl transition-all duration-300
                                     ${isSelected 
-                                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-md scale-105' 
-                                        : 'text-slate-400 dark:text-slate-500 hover:bg-white/50 dark:hover:bg-white/5'
+                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105' 
+                                        : 'text-slate-400 dark:text-slate-500 hover:bg-white dark:hover:bg-slate-800'
                                     }
                                 `}
                             >
-                                <span className="text-[10px] font-bold mb-0.5 uppercase">{format(day, 'EEE')}</span>
-                                <span className={`text-sm font-bold ${isTodayDate && !isSelected ? 'text-blue-500' : ''}`}>{format(day, 'd')}</span>
-                                {isTodayDate && <div className="w-1 h-1 bg-blue-500 rounded-full mt-0.5"></div>}
+                                <span className={`text-[10px] font-bold mb-0.5 uppercase ${isSelected ? 'text-emerald-100' : ''}`}>{format(day, 'EEE')}</span>
+                                <span className={`text-sm font-bold ${isTodayDate && !isSelected ? 'text-emerald-500' : ''}`}>{format(day, 'd')}</span>
+                                {isTodayDate && !isSelected && <div className="w-1 h-1 bg-emerald-500 rounded-full mt-0.5"></div>}
                             </button>
                         );
                     })}
@@ -193,9 +197,9 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
                 {/* Add New Card */}
                 <button 
                     onClick={() => setShowAddSheet(true)}
-                    className="aspect-square rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all group"
+                    className="aspect-square rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-all group"
                 >
-                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
                         <Plus size={24} />
                     </div>
                     <span className="font-bold text-sm">New Habit</span>
