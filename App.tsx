@@ -17,7 +17,7 @@ import { MobileNavigation } from './components/MobileNavigation';
 import { Task, ViewType, Habit, FocusCategory, List, AppSettings, FocusSession, Transaction, Debt, Debtor, SavingsGoal, Subscription, Investment } from './types';
 import { loadFromStorage, saveToStorage, STORAGE_KEYS } from './services/storageService';
 import { loginWithGoogle, logoutUser, subscribeToAuthChanges, saveUserDataToFirestore, subscribeToDataChanges, loadUserDataFromFirestore } from './services/firebaseService';
-import { fetchCalendarEvents } from './services/googleCalendarService';
+import { fetchCalendarEvents, updateCalendarEvent, deleteCalendarEvent, createCalendarEvent } from './services/googleCalendarService';
 import { playAlarmSound } from './services/notificationService';
 import { updateWidgetData } from './services/widgetService';
 import { Loader2 } from 'lucide-react';
@@ -369,12 +369,31 @@ const App: React.FC = () => {
 
   // --- Handlers ---
   const handleAddTask = useCallback((task: Task) => setTasks(prev => [...prev, task]), []);
-  const handleUpdateTask = useCallback((task: Task) => setTasks(prev => prev.map(t => t.id === task.id ? task : t)), []);
+  
+  const handleUpdateTask = useCallback((task: Task) => {
+    setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+    
+    // Cross-sync: Update Google Calendar if linked
+    if (accessToken && task.externalId) {
+        updateCalendarEvent(accessToken, task).catch(err => console.error("Failed to update GCal event", err));
+    }
+  }, [accessToken]);
+
   const handleToggleTask = useCallback((taskId: string) => {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isCompleted: !t.isCompleted, updatedAt: new Date() } : t));
     playAlarmSound();
   }, []);
-  const handleDeleteTask = useCallback((taskId: string) => setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isDeleted: true, updatedAt: new Date() } : t)), []);
+
+  const handleDeleteTask = useCallback((taskId: string) => {
+     // Find the task before removing/marking deleted to check if it's an external event
+     const taskToDelete = tasks.find(t => t.id === taskId);
+     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isDeleted: true, updatedAt: new Date() } : t));
+     
+     // Cross-sync: Delete from Google Calendar if linked
+     if (taskToDelete?.externalId && accessToken) {
+         deleteCalendarEvent(accessToken, taskToDelete.externalId).catch(err => console.error("Failed to delete GCal event", err));
+     }
+  }, [tasks, accessToken]);
   
   const handleLogin = async () => {
     try {
