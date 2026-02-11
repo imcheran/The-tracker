@@ -137,7 +137,7 @@ const HabitView: React.FC<HabitViewProps> = React.memo(({
     <div className="h-full flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950">
         
         {/* Header - Safe Area Wrapper */}
-        <div className="pt-safe shrink-0 px-4 pt-4 z-20">
+        <div className="pt-[calc(env(safe-area-inset-top)+1rem)] shrink-0 px-4 z-20">
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-sm rounded-[32px] p-5 flex flex-col gap-5">
                 <div className="flex justify-between items-center">
                     <div className="flex flex-col">

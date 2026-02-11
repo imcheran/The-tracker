@@ -57,6 +57,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   
   const editorRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  // Ref to track the ID of the newly added subtask to focus it
+  const newSubtaskRef = useRef<string | null>(null);
   
   const isDarkMode = document.documentElement.classList.contains('dark');
   const childTasks = tasks.filter(t => t.parentId === task.id && !t.isDeleted);
@@ -69,6 +72,17 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
     setNoteColor(task.color || (isDarkMode ? '#0f172a' : '#ffffff'));
     setNoteTheme(task.backgroundImage || 'none');
   }, [task.id, isDarkMode]);
+
+  // Focus new subtask when added
+  useEffect(() => {
+      if (newSubtaskRef.current) {
+          const el = document.getElementById(`subtask-input-${newSubtaskRef.current}`);
+          if (el) {
+              el.focus();
+              newSubtaskRef.current = null;
+          }
+      }
+  }, [childTasks.length]);
 
   // --- Handlers ---
 
@@ -95,8 +109,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   const handleAddChecklistItem = () => {
       if (!onAddTask) return;
       
+      const newId = Date.now().toString();
       const newChildTask: Task = {
-          id: Date.now().toString(),
+          id: newId,
           parentId: task.id,
           title: '',
           isCompleted: false,
@@ -110,8 +125,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
           isNote: true
       };
       
+      newSubtaskRef.current = newId;
       onAddTask(newChildTask);
-      // We focus the new input automatically via autoFocus in render
   };
 
   const handleUpdateChildTitle = (childId: string, newTitle: string) => {
@@ -128,6 +143,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
       } else if (e.key === 'Backspace' && (e.target as HTMLInputElement).value === '') {
           e.preventDefault();
           onDeleteTask(childId);
+          // Optional: Focus previous item could be implemented here
       }
   };
 
@@ -165,10 +181,19 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
 
   const editedDateStr = task.updatedAt ? format(new Date(task.updatedAt), 'MMM d, h:mm a') : 'Just now';
   
-  // Dynamic contrast classes based on background
+  // Logic to determine text color based on background
+  // If background is white (default), force text to black. If dark mode default, force white.
+  // If a specific color is chosen, try to adapt (simple logic: most keep colors are light, so dark text is safe, except for dark slate).
   const isDefaultBg = noteTheme === 'none' && (noteColor === '#ffffff' || noteColor === '#0f172a');
-  const textColorClass = isDefaultBg ? 'text-slate-900 dark:text-slate-100' : 'text-slate-800 dark:text-slate-900 mix-blend-hard-light'; 
-  const iconColorClass = isDefaultBg ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700/80 dark:text-slate-800/80';
+  
+  // Fix: Explicitly set text color to slate-900 if bg is light/white to prevent "white on white"
+  const textColorClass = noteColor === '#ffffff' || noteColor === '#fecaca' || noteColor === '#fed7aa' || noteColor === '#fef08a' || noteColor === '#bbf7d0' || noteColor === '#bfdbfe' || noteColor === '#e9d5ff' || noteColor === '#fbcfe8' || noteColor === '#e2e8f0'
+    ? 'text-slate-900 placeholder:text-slate-400' 
+    : 'text-white placeholder:text-white/50';
+
+  const iconColorClass = noteColor === '#ffffff' 
+    ? 'text-slate-500 hover:bg-slate-100' 
+    : 'text-slate-800/60 hover:bg-black/10';
 
   const getPriorityColor = (p: Priority) => {
       switch (p) {
@@ -217,18 +242,18 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
       <div className="pt-safe shrink-0 sticky top-0 z-20 bg-white/0 backdrop-blur-sm transition-colors">
          <div className="h-16 flex items-center justify-between px-3">
              <div className="flex items-center gap-2">
-                 <button onClick={onClose} className={`p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-95 ${iconColorClass}`}>
+                 <button onClick={onClose} className={`p-3 rounded-full transition-all active:scale-95 ${iconColorClass}`}>
                      <ChevronLeft size={26} strokeWidth={2.5} />
                  </button>
              </div>
              <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 backdrop-blur-md rounded-full p-1 pr-2">
-                 <button onClick={() => handleSave({ isPinned: !task.isPinned })} className={`p-2.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${task.isPinned ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30' : iconColorClass}`}>
+                 <button onClick={() => handleSave({ isPinned: !task.isPinned })} className={`p-2.5 rounded-full transition-colors ${task.isPinned ? 'text-blue-600 bg-blue-100' : iconColorClass}`}>
                      <Pin size={18} fill={task.isPinned ? 'currentColor' : 'none'} className={task.isPinned ? 'rotate-45' : ''} />
                  </button>
-                 <button className={`p-2.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${iconColorClass}`}>
+                 <button className={`p-2.5 rounded-full transition-colors ${iconColorClass}`}>
                      <Bell size={18} />
                  </button>
-                 <button onClick={() => { handleSave({ isArchived: !task.isArchived }); onClose(); }} className={`p-2.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${iconColorClass}`}>
+                 <button onClick={() => { handleSave({ isArchived: !task.isArchived }); onClose(); }} className={`p-2.5 rounded-full transition-colors ${iconColorClass}`}>
                      <Archive size={18} />
                  </button>
              </div>
@@ -243,16 +268,17 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
               <div className="flex items-start gap-4">
                   <button 
                       onClick={() => handleSave({ isCompleted: !task.isCompleted })}
-                      className={`mt-1.5 flex-shrink-0 transition-colors ${task.isCompleted ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600 hover:text-blue-400'}`}
+                      className={`mt-1.5 flex-shrink-0 transition-colors ${task.isCompleted ? 'text-blue-500' : 'text-slate-400 hover:text-blue-400'}`}
                   >
                       {task.isCompleted ? <CheckCircle2 size={28} className="fill-current" /> : <Circle size={28} strokeWidth={2} />}
                   </button>
                   <input 
+                    ref={titleInputRef}
                     value={title} 
                     onChange={(e) => setTitle(e.target.value)} 
                     onBlur={() => handleSave()} 
                     placeholder="Title" 
-                    className={`flex-1 bg-transparent border-none outline-none text-2xl font-bold placeholder:text-slate-400/60 leading-tight ${textColorClass} ${task.isCompleted ? 'line-through opacity-50' : ''}`} 
+                    className={`flex-1 bg-transparent border-none outline-none text-2xl font-bold leading-tight ${textColorClass} ${task.isCompleted ? 'line-through opacity-50' : ''}`} 
                   />
               </div>
 
@@ -260,7 +286,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
               <div className="flex flex-wrap gap-2 pl-11">
                   {/* Date Chip */}
                   <div className="relative group">
-                      <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${task.dueDate ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800' : 'bg-transparent border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                      <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${task.dueDate ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-transparent border-slate-300/50 text-slate-500 hover:bg-black/5'}`}>
                           <Calendar size={14} />
                           {formatDueDate(task.dueDate)}
                       </button>
@@ -274,7 +300,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                   {/* Priority Chip */}
                   <button 
                       onClick={cyclePriority}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 hover:bg-black/5 dark:hover:bg-white/5 ${getPriorityColor(task.priority)} bg-transparent`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-300/50 hover:bg-black/5 ${getPriorityColor(task.priority)} bg-transparent`}
                   >
                       <Flag size={14} fill="currentColor" />
                       {getPriorityLabel(task.priority)}
@@ -283,7 +309,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                   {/* List Chip */}
                   <button 
                       onClick={cycleList}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 hover:bg-black/5 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 bg-transparent"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-300/50 hover:bg-black/5 text-slate-500 bg-transparent"
                   >
                       <Folder size={14} />
                       {lists.find(l => l.id === task.listId)?.name || 'Inbox'}
@@ -291,7 +317,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
 
                   {/* Tags Chip */}
                   {task.tags?.map(tag => (
-                      <span key={tag} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-transparent">
+                      <span key={tag} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-black/5 text-slate-600 border border-transparent">
                           <Hash size={12} /> {tag}
                       </span>
                   ))}
@@ -304,7 +330,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                     contentEditable 
                     onBlur={handleEditorBlur} 
                     dangerouslySetInnerHTML={{ __html: description }} 
-                    className={`w-full text-base leading-relaxed bg-transparent border-none outline-none min-h-[60px] empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400/60 ${textColorClass}`}
+                    className={`w-full text-base leading-relaxed bg-transparent border-none outline-none min-h-[60px] empty:before:content-[attr(data-placeholder)] empty:before:opacity-50 ${textColorClass}`}
                     data-placeholder="Add details, notes, or links..."
                   />
               </div>
@@ -332,7 +358,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                           >
                               {/* Drag Handle */}
                               <div className="opacity-0 group-hover:opacity-30 cursor-grab active:cursor-grabbing p-1">
-                                  <GripVertical size={14} className={iconColorClass}/>
+                                  <GripVertical size={14} className="text-slate-400"/>
                               </div>
 
                               <button 
@@ -343,6 +369,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                               </button>
                               
                               <input
+                                  id={`subtask-input-${child.id}`}
                                   value={child.title}
                                   onChange={(e) => handleUpdateChildTitle(child.id, e.target.value)}
                                   onKeyDown={(e) => handleChildKeyDown(e, child.id)}
@@ -363,22 +390,22 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
       {/* Bottom Bar (Glassmorphic) */}
       <div className="h-14 border-t border-black/5 dark:border-white/5 flex items-center justify-between px-4 shrink-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl relative z-20 pb-safe">
           <div className="flex items-center gap-1">
-              <button onClick={handleAddChecklistItem} className={`p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${iconColorClass}`}>
+              <button onClick={handleAddChecklistItem} className={`p-3 rounded-full hover:bg-black/5 transition-colors ${iconColorClass}`}>
                   <CheckSquare size={20} />
               </button>
-              <button onClick={() => setShowThemePicker(!showThemePicker)} className={`p-3 rounded-full transition-colors ${showThemePicker ? 'bg-black/10 dark:bg-white/10 text-blue-500' : iconColorClass} hover:bg-black/5 dark:hover:bg-white/5`}>
+              <button onClick={() => setShowThemePicker(!showThemePicker)} className={`p-3 rounded-full transition-colors ${showThemePicker ? 'bg-black/10 text-blue-500' : iconColorClass} hover:bg-black/5`}>
                   <Palette size={20} />
               </button>
               <div className="relative">
-                  <button className={`p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${iconColorClass}`}>
+                  <button className={`p-3 rounded-full hover:bg-black/5 transition-colors ${iconColorClass}`}>
                       <ImageIcon size={20} />
                   </button>
                   <input type="file" accept="image/*" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
               </div>
-              <button onClick={() => setShowDrawing(true)} className={`p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${iconColorClass}`}>
+              <button onClick={() => setShowDrawing(true)} className={`p-3 rounded-full hover:bg-black/5 transition-colors ${iconColorClass}`}>
                    <PenTool size={20} />
               </button>
-              <button className={`p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${iconColorClass}`}>
+              <button className={`p-3 rounded-full hover:bg-black/5 transition-colors ${iconColorClass}`}>
                    <Mic size={20} />
               </button>
           </div>
@@ -388,7 +415,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
-              <button onClick={() => setShowOptions(!showOptions)} className={`p-3 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${iconColorClass}`}>
+              <button onClick={() => setShowOptions(!showOptions)} className={`p-3 rounded-full hover:bg-black/5 transition-colors ${iconColorClass}`}>
                   <MoreVertical size={20} />
               </button>
           </div>

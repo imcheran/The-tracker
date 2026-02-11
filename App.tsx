@@ -527,7 +527,7 @@ const App: React.FC = () => {
                         categories={focusCategories}
                         onAddCategory={(c) => setFocusCategories([...focusCategories, c])}
                         activeTask={tasks.find(t => t.id === focusTaskId)}
-                        onFocusComplete={(s) => setFocusSessions([...focusSessions, s])}
+                        onFocusComplete={(s) => setFocusSessions(prev => [...prev, s])}
                         onMenuClick={() => setIsSidebarOpen(true)}
                         focusSessions={focusSessions}
                         unlockedTrees={settings.focus?.unlockedTrees}

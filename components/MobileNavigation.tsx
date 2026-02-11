@@ -18,8 +18,8 @@ export const MobileNavigation: React.FC<MobileNavigationProps> = React.memo(({ c
 
   return (
     <div 
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-30 pb-safe shadow-[0_-1px_3px_rgba(0,0,0,0.05)]"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0px)' }}
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-30 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}
     >
       <div className="flex justify-between items-center h-14 px-4">
         {navItems.map((item) => {

@@ -9,7 +9,7 @@ import {
 } from 'date-fns';
 import { 
   Menu, ChevronLeft, ChevronRight, RefreshCw, CheckCircle2, Circle, 
-  Clock, Target, MapPin, Calendar as CalendarIcon, MoreHorizontal, Loader2,
+  Clock, Calendar as CalendarIcon, Loader2,
   ChevronDown, LayoutGrid, Columns, RectangleVertical, CheckSquare
 } from 'lucide-react';
 
@@ -55,11 +55,6 @@ const startOfWeek = (date: Date, options?: { weekStartsOn?: number }) => {
 const setHours = (date: Date, hours: number) => {
   const d = new Date(date);
   d.setHours(hours);
-  return d;
-};
-const setMinutes = (date: Date, minutes: number) => {
-  const d = new Date(date);
-  d.setMinutes(minutes);
   return d;
 };
 
@@ -160,23 +155,24 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   const renderHeader = () => {
-      let title = format(currentDate, 'MMMM yyyy');
+      // Changed MMMM yyyy to MMM yyyy for shorter month names
+      let title = format(currentDate, 'MMM yyyy');
       if (viewMode === 'week') {
           const start = startOfWeek(currentDate);
           const end = endOfWeek(currentDate);
-          if (isSameMonth(start, end)) title = format(start, 'MMMM yyyy');
+          if (isSameMonth(start, end)) title = format(start, 'MMM yyyy');
           else title = `${format(start, 'MMM')} - ${format(end, 'MMM yyyy')}`;
       } else if (viewMode === 'day') {
-          title = format(currentDate, 'MMMM d, yyyy');
+          title = format(currentDate, 'MMM d, yyyy');
       }
 
       return (
-        <div className="pt-safe border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md transition-colors z-30 sticky top-0">
+        <div className="pt-[calc(env(safe-area-inset-top)+0.5rem)] border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl transition-colors z-30 sticky top-0">
             <div className="h-16 px-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <button onClick={onMenuClick} className="md:hidden text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 p-2 rounded-md transition-colors"><Menu size={20}/></button>
                     <div className="flex items-center gap-2">
-                        <h1 className="text-lg font-bold text-slate-800 dark:text-white transition-colors truncate max-w-[120px] sm:max-w-none">{title}</h1>
+                        <h1 className="text-xl font-bold text-slate-800 dark:text-white transition-colors truncate max-w-[140px] sm:max-w-none">{title}</h1>
                         <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 ml-2">
                             <button onClick={prev} className="p-1 hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded shadow-sm transition-colors"><ChevronLeft size={16}/></button>
                             <button onClick={next} className="p-1 hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 rounded shadow-sm transition-colors"><ChevronRight size={16}/></button>
@@ -246,7 +242,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       const selectedDayHabits = getHabitsForDay(selectedDate);
 
       return (
-          <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+          <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 h-full">
               {/* Day Headers */}
               <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
@@ -254,8 +250,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   ))}
               </div>
               
-              {/* Calendar Grid */}
-              <div className="grid grid-cols-7 auto-rows-fr bg-slate-200 dark:bg-slate-800 gap-px border-b border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar" style={{ maxHeight: '55%' }}>
+              {/* Calendar Grid - Reduced max-height to 50% to give list more space */}
+              <div className="grid grid-cols-7 auto-rows-fr bg-slate-200 dark:bg-slate-800 gap-px border-b border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar shrink-0" style={{ maxHeight: '50%' }}>
                   {days.map(day => {
                       const dayTasks = getTasksForDay(day);
                       const dayHabits = getHabitsForDay(day);
@@ -288,8 +284,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                   })}
               </div>
 
-              {/* Selected Agenda */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-950">
+              {/* Selected Agenda - Added min-h-0 to allow proper flex scrolling */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-950 min-h-0 pb-20">
                   <div className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 px-4 py-3 z-10 flex justify-between items-center shadow-sm">
                       <h2 className="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-sm"><CalendarIcon size={16} className="text-rose-500" /> {format(selectedDate, 'EEEE, MMM d')}</h2>
                       <span className="text-[10px] font-bold bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-2 py-1 rounded-full">{selectedDayTasks.length + selectedDayHabits.length} Events</span>
@@ -373,7 +369,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                       </div>
                   )}
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+              <div className="flex-1 overflow-y-auto custom-scrollbar relative pb-20">
                   {isSameDay(days[0], now) || (days.length > 1 && isAfter(now, days[0]) && isBefore(now, days[days.length - 1])) ? (
                       <div className="absolute left-0 right-0 z-10 pointer-events-none flex items-center" style={{ top: currentMinutes * PIXELS_PER_MINUTE }}>
                           <div className="w-12 text-[10px] font-bold text-red-500 text-right pr-1 -mt-2.5 bg-white dark:bg-slate-950">{format(now, 'HH:mm')}</div>

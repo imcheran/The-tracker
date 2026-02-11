@@ -363,8 +363,8 @@ const TaskView: React.FC<TaskViewProps> = ({
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors">
-        {/* Header - Bento Style */}
-        <div className="pt-safe shrink-0 sticky top-0 z-20 pointer-events-none px-4 md:px-6 pt-4">
+        {/* Header - Bento Style with Safe Area */}
+        <div className="pt-[calc(env(safe-area-inset-top)+1rem)] shrink-0 sticky top-0 z-20 pointer-events-none px-4 md:px-6">
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-sm rounded-[24px] flex items-center justify-between p-4 pointer-events-auto">
                 <div className="flex items-center gap-4">
                     <button onClick={onMenuClick} className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors md:hidden">
