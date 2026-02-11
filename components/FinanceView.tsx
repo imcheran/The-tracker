@@ -9,7 +9,7 @@ import {
   Notebook, Gift, CircleDot, CreditCard, User, Banknote, Landmark, CircleDollarSign,
   ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, Users, Pencil, CheckCircle, Target, PiggyBank, Briefcase, Car, Home,
   Calendar, RotateCw, Play, Pause, ExternalLink, BarChart3, Clock, Download, FileText, Smartphone, Monitor, ShoppingCart, Coffee,
-  Heart, Users2, Split, BarChart2, Eye, Activity, Percent, ChevronDown, Coins, Calculator, Delete
+  Heart, Users2, Split, BarChart2, Eye, Activity, Percent, ChevronDown, Coins, Calculator, Delete, MoreHorizontal
 } from 'lucide-react';
 import { 
   format, isWithinInterval, isToday, eachDayOfInterval, 
@@ -93,10 +93,10 @@ const getNextRenewal = (start: string | Date, period: 'Monthly' | 'Yearly') => {
     return next;
 };
 
-const AccountCard = ({ name, type, amount, currency }: any) => {
+const AccountCard = ({ name, type, amount, currency, onEdit }: any) => {
     const bg = type === 'Credit Card' ? 'bg-gradient-to-br from-slate-800 to-slate-900 text-white' : type === 'Bank' ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700';
     return (
-        <div className={`p-4 rounded-2xl shadow-sm min-w-[140px] flex flex-col justify-between h-28 ${bg}`}>
+        <div onClick={onEdit} className={`p-4 rounded-2xl shadow-sm min-w-[140px] flex flex-col justify-between h-28 ${bg} cursor-pointer hover:opacity-90 active:scale-95 transition-all relative group`}>
             <div className="flex justify-between items-start">
                 <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">{type}</span>
                 {type === 'Credit Card' ? <CreditCard size={16} /> : type === 'Bank' ? <Landmark size={16} /> : <Banknote size={16} />}
@@ -104,6 +104,9 @@ const AccountCard = ({ name, type, amount, currency }: any) => {
             <div>
                 <div className="text-lg font-bold">{currency}{amount.toLocaleString()}</div>
                 <div className="text-[10px] opacity-60">Available</div>
+            </div>
+            <div className="absolute top-2 right-2 p-1 rounded-full bg-black/5 dark:bg-white/10">
+                <Edit2 size={12} className="opacity-70" />
             </div>
         </div>
     );
@@ -145,6 +148,10 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   const [showInvModal, setShowInvModal] = useState(false);
   const [showGoalDeposit, setShowGoalDeposit] = useState<{ id: string, name: string } | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
+
+  // Balance Adjustment
+  const [adjustAccount, setAdjustAccount] = useState<{name: string, type: string, current: number} | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState('');
 
   // Form States
   const [debtorName, setDebtorName] = useState('');
@@ -298,6 +305,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   const groupedTransactions = useMemo(() => {
       const groups: Record<string, Transaction[]> = {};
       monthTransactions.forEach(t => {
+          if (t.exclude_from_budget) return; // Skip excluded transactions in list
           if (!groups[t.date]) groups[t.date] = [];
           groups[t.date].push(t);
       });
@@ -327,13 +335,16 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       return acc;
   }, [allTransactionsSorted]);
 
+  const totalBalance = accountBalances.cash + accountBalances.bank + accountBalances.credit;
+
   const chartData = useMemo(() => {
       const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
       return days.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const dayTxns = monthTransactions.filter(t => t.date === dateStr);
-          const income = dayTxns.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);
-          const expense = dayTxns.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);
+          // Strictly exclude 'exclude_from_budget' items from the graph
+          const income = dayTxns.filter(t => t.type === 'credit' && !t.exclude_from_budget).reduce((sum, t) => sum + t.amount, 0);
+          const expense = dayTxns.filter(t => t.type === 'debit' && !t.exclude_from_budget).reduce((sum, t) => sum + t.amount, 0);
           return { name: format(day, 'd'), income, expense };
       });
   }, [monthTransactions, currentMonth]);
@@ -367,12 +378,46 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       resetForm();
   };
 
+  const handleAdjustBalance = () => {
+      if (!adjustAccount || !adjustAmount) return;
+      const newBal = parseFloat(adjustAmount);
+      if (isNaN(newBal)) return;
+      
+      const diff = newBal - adjustAccount.current;
+      if (diff === 0) {
+          setAdjustAccount(null);
+          return;
+      }
+      
+      const isCredit = diff > 0;
+      
+      // Create adjustment transaction that doesn't affect budget
+      const adjustmentTx: Transaction = {
+          id: Date.now().toString(),
+          is_transaction: true,
+          amount: Math.abs(diff),
+          type: isCredit ? 'credit' : 'debit',
+          merchant: 'Balance Adjustment',
+          category: 'Adjustment',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          payment_method: adjustAccount.type,
+          notes: `Manual adjustment from ${adjustAccount.current} to ${newBal}`,
+          raw_sms: '',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          exclude_from_budget: true, // Key: Exclude from spending graph
+          isShared: false,
+          paidBy: user?.uid
+      };
+      
+      onAddTransaction(adjustmentTx);
+      setAdjustAccount(null);
+      setAdjustAmount('');
+  };
+
   const handleSaveGoal = () => {
       if (!goalName || !goalTarget || !onAddGoal || !onUpdateGoal) return;
-      
-      // Ensure we preserve the ID if editing, otherwise generate new
       const goalId = editingGoal ? editingGoal.id : Date.now().toString();
-      
       const goalData: SavingsGoal = {
           id: goalId,
           name: goalName,
@@ -384,10 +429,8 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           createdAt: editingGoal ? editingGoal.createdAt : new Date(),
           updatedAt: new Date()
       };
-      
       if (editingGoal) onUpdateGoal(goalData); 
       else onAddGoal(goalData);
-      
       setShowGoalModal(false); 
       resetGoalForm();
   };
@@ -398,12 +441,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       if(goal) {
           const amt = parseFloat(depositAmount);
           if(!isNaN(amt)) {
-              onUpdateGoal({ 
-                  ...goal, 
-                  currentAmount: goal.currentAmount + amt, 
-                  updatedAt: new Date() 
-              });
-              // Also add a transaction for record
+              onUpdateGoal({ ...goal, currentAmount: goal.currentAmount + amt, updatedAt: new Date() });
               onAddTransaction({
                   id: Date.now().toString(),
                   is_transaction: true,
@@ -426,27 +464,14 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   const renderOverview = () => (
       <div className="space-y-6 animate-in fade-in pb-20 p-4">
           
-          {/* Workspace Toggle */}
           <div className="flex justify-center mb-2">
               <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-full flex relative shadow-inner">
-                  <button 
-                      onClick={() => setWorkspaceMode('personal')}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all z-10 ${workspaceMode === 'personal' ? 'text-white' : 'text-slate-500'}`}
-                  >
-                      Personal
-                  </button>
-                  <button 
-                      onClick={() => setWorkspaceMode('joint')}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all z-10 flex items-center gap-1 ${workspaceMode === 'joint' ? 'text-white' : 'text-slate-500'}`}
-                  >
-                      <Heart size={10} fill="currentColor" />
-                      Joint
-                  </button>
+                  <button onClick={() => setWorkspaceMode('personal')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all z-10 ${workspaceMode === 'personal' ? 'text-white' : 'text-slate-500'}`}>Personal</button>
+                  <button onClick={() => setWorkspaceMode('joint')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all z-10 flex items-center gap-1 ${workspaceMode === 'joint' ? 'text-white' : 'text-slate-500'}`}><Heart size={10} fill="currentColor" /> Joint</button>
                   <div className={`absolute top-1 bottom-1 w-[50%] bg-indigo-600 rounded-full transition-transform duration-300 ${workspaceMode === 'joint' ? 'translate-x-full' : 'translate-x-0'}`} />
               </div>
           </div>
 
-          {/* Chart Section */}
           <div className="bg-white dark:bg-slate-900 rounded-[28px] p-5 shadow-sm border border-slate-100 dark:border-slate-800">
               <div className="flex justify-between items-center mb-4">
                   <h3 className="font-bold text-slate-800 dark:text-white">Trend</h3>
@@ -471,34 +496,44 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.3} />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} interval={4} />
-                          <Tooltip 
-                              contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', fontSize: '12px', color: '#fff' }}
-                              itemStyle={{ color: '#fff' }}
-                          />
+                          <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', fontSize: '12px', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                           <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" />
                           <Area type="monotone" dataKey="expense" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorExpense)" />
                       </AreaChart>
                   </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              {/* 3-Column Grid for Income, Expense, Total Balance */}
+              <div className="grid grid-cols-3 gap-3 mt-4">
                   <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3">
                       <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1">Income</div>
-                      <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{formatCurrency(stats.income)}</div>
+                      <div className="text-sm sm:text-base font-bold text-emerald-700 dark:text-emerald-400 truncate">{formatCurrency(stats.income)}</div>
                   </div>
                   <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3">
                       <div className="text-[10px] text-red-600 font-bold uppercase mb-1">Expense</div>
-                      <div className="text-lg font-bold text-red-700 dark:text-red-400">{formatCurrency(stats.expense)}</div>
+                      <div className="text-sm sm:text-base font-bold text-red-700 dark:text-red-400 truncate">{formatCurrency(stats.expense)}</div>
+                  </div>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+                      <div className="text-[10px] text-blue-600 font-bold uppercase mb-1">Total Balance</div>
+                      <div className={`text-sm sm:text-base font-bold truncate ${totalBalance >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-600'}`}>{formatCurrency(totalBalance)}</div>
                   </div>
               </div>
           </div>
 
-          {/* Accounts Breakdown */}
           <div>
               <h3 className="font-bold text-slate-800 dark:text-white mb-3 px-1">Accounts</h3>
               <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                  <AccountCard name="Cash" type="Cash" amount={accountBalances.cash} currency={currency.symbol} />
-                  <AccountCard name="Bank" type="Bank" amount={accountBalances.bank} currency={currency.symbol} />
-                  <AccountCard name="Cards" type="Credit Card" amount={accountBalances.credit} currency={currency.symbol} />
+                  <AccountCard 
+                    name="Cash" type="Cash" amount={accountBalances.cash} currency={currency.symbol} 
+                    onEdit={() => setAdjustAccount({ name: 'Cash', type: 'Cash', current: accountBalances.cash })}
+                  />
+                  <AccountCard 
+                    name="Bank" type="Bank" amount={accountBalances.bank} currency={currency.symbol} 
+                    onEdit={() => setAdjustAccount({ name: 'Bank', type: 'Bank', current: accountBalances.bank })}
+                  />
+                  <AccountCard 
+                    name="Cards" type="Credit Card" amount={accountBalances.credit} currency={currency.symbol} 
+                    onEdit={() => setAdjustAccount({ name: 'Credit Card', type: 'Credit Card', current: accountBalances.credit })}
+                  />
               </div>
           </div>
       </div>
@@ -512,7 +547,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                   <Plus size={20}/>
               </button>
           </div>
-          
           <div className="grid grid-cols-1 gap-4">
               {goals.map(goal => {
                   const progress = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
@@ -636,194 +670,38 @@ const FinanceView: React.FC<FinanceViewProps> = ({
             {/* ... other tabs ... */}
         </div>
 
-        {/* Deposit Modal */}
-        {showGoalDeposit && (
-            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowGoalDeposit(null)}>
+        {/* Balance Adjustment Modal */}
+        {adjustAccount && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setAdjustAccount(null)}>
                 <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Add Money</h3>
-                    <p className="text-sm text-slate-500 mb-6">to {showGoalDeposit.name}</p>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Adjust Balance</h3>
+                    <p className="text-sm text-slate-500 mb-6">Set current value for {adjustAccount.name}</p>
                     
-                    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mb-6 flex items-center gap-2">
-                        <span className="text-2xl font-bold text-slate-400">{currency.symbol}</span>
+                    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mb-6">
+                        <div className="text-xs font-bold text-slate-400 uppercase mb-2">Current Balance</div>
+                        <div className="text-xl font-bold text-slate-700 dark:text-slate-300">{formatCurrency(adjustAccount.current)}</div>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mb-6 flex items-center gap-2 border-2 border-indigo-500/20 focus-within:border-indigo-500 transition-colors">
+                        <span className="text-2xl font-bold text-indigo-500">{currency.symbol}</span>
                         <input 
                             type="number"
-                            value={depositAmount}
-                            onChange={(e) => setDepositAmount(e.target.value)}
+                            value={adjustAmount}
+                            onChange={(e) => setAdjustAmount(e.target.value)}
                             className="bg-transparent text-3xl font-black text-slate-900 dark:text-white w-full outline-none"
-                            placeholder="0"
+                            placeholder={adjustAccount.current.toString()}
                             autoFocus
                         />
                     </div>
                     
-                    <button onClick={handleDeposit} className="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-all active:scale-95">
-                        Confirm Deposit
+                    <button onClick={handleAdjustBalance} className="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-all active:scale-95">
+                        Update Balance
                     </button>
+                    <p className="text-[10px] text-slate-400 text-center mt-3">This adjustment will not affect your monthly spending graph.</p>
                 </div>
             </div>
         )}
 
-        {/* Add Transaction Modal */}
-        {showInput && (
-            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md flex items-end sm:items-center justify-center p-4 animate-in fade-in" onClick={() => setShowInput(false)}>
-                <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[32px] p-6 shadow-2xl animate-in slide-in-from-bottom border border-slate-100 dark:border-slate-800" onClick={e => e.stopPropagation()}>
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-black text-slate-900 dark:text-white">{editingTransaction ? 'Edit Transaction' : 'New Transaction'}</h3>
-                        <button onClick={() => setShowInput(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"><X size={20}/></button>
-                    </div>
-                    
-                    {/* Amount Input */}
-                    <div className="mb-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-100 dark:border-slate-800">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Amount</label>
-                        <div className="flex items-center gap-2 mt-2">
-                            <span className="text-3xl font-bold text-indigo-500">{currency.symbol}</span>
-                            <input 
-                                type="number" 
-                                value={amount} 
-                                onChange={(e) => setAmount(e.target.value)} 
-                                className="w-full text-4xl font-black bg-transparent outline-none text-slate-900 dark:text-white placeholder-slate-300"
-                                placeholder="0"
-                                autoFocus
-                            />
-                            <button onClick={() => { setCalcDisplay(amount || '0'); setShowCalculator(true); }} className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-colors">
-                                <Calculator size={24} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Type Selector */}
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl mb-6">
-                        <button onClick={() => setType('debit')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${type === 'debit' ? 'bg-white dark:bg-slate-700 text-red-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Expense</button>
-                        <button onClick={() => setType('credit')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${type === 'credit' ? 'bg-white dark:bg-slate-700 text-emerald-500 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Income</button>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs font-bold text-slate-400 uppercase ml-1">Merchant</label>
-                            <input 
-                                value={merchant} 
-                                onChange={(e) => setMerchant(e.target.value)} 
-                                className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-1 text-base font-bold outline-none border border-transparent focus:border-indigo-500 transition-colors dark:text-white"
-                                placeholder="Where did you spend?"
-                            />
-                            {/* Suggestions */}
-                            {merchantSuggestions.length > 0 && (
-                                <div className="flex gap-2 mt-2 overflow-x-auto no-scrollbar pb-1">
-                                    {merchantSuggestions.map(s => (
-                                        <button key={s} onClick={() => setMerchant(s)} className="text-xs bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 whitespace-nowrap hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 transition-colors font-bold">{s}</button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Category</label>
-                                <div className="relative">
-                                    <select 
-                                        value={category} 
-                                        onChange={(e) => setCategory(e.target.value)}
-                                        className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-1 text-sm font-bold outline-none appearance-none border border-transparent focus:border-indigo-500 transition-colors dark:text-white"
-                                    >
-                                        {Object.entries(GROUPED_CATEGORIES).map(([group, cats]) => (
-                                            <optgroup key={group} label={group}>
-                                                {cats.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                                            </optgroup>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 mt-0.5">
-                                        <ChevronDown size={16} />
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Payment Method</label>
-                                <div className="relative">
-                                    <select 
-                                        value={paymentMethod} 
-                                        onChange={(e) => setPaymentMethod(e.target.value)}
-                                        className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl mt-1 text-sm font-bold outline-none appearance-none border border-transparent focus:border-indigo-500 transition-colors dark:text-white"
-                                    >
-                                        <option value="Cash">Cash</option>
-                                        <option value="Credit Card">Credit Card</option>
-                                        <option value="Debit Card">Debit Card</option>
-                                        <option value="UPI">UPI</option>
-                                        <option value="Bank Transfer">Bank Transfer</option>
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 mt-0.5">
-                                        <ChevronDown size={16} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button onClick={handleManualSubmit} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold mt-8 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/30 active:scale-[0.98]">
-                        {editingTransaction ? 'Save Changes' : 'Add Transaction'}
-                    </button>
-                    {editingTransaction && (
-                        <button onClick={() => { onDeleteTransaction(editingTransaction.id); setShowInput(false); }} className="w-full text-red-500 font-bold py-3 mt-2 text-sm hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-colors">Delete Transaction</button>
-                    )}
-                </div>
-            </div>
-        )}
-
-        {/* Calculator Modal */}
-        {showCalculator && (
-            <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowCalculator(false)}>
-                <div className="bg-white dark:bg-slate-900 w-full max-w-[320px] rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-                    {/* Display */}
-                    <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-4 mb-4 text-right">
-                        <div className="text-3xl font-black text-slate-900 dark:text-white truncate">{calcDisplay}</div>
-                    </div>
-                    
-                    {/* Keypad */}
-                    <div className="grid grid-cols-4 gap-3">
-                        {['7', '8', '9', '/'].map(btn => (
-                            <button key={btn} onClick={() => handleCalcInput(btn)} className={`h-14 rounded-2xl font-bold text-xl transition-all active:scale-95 ${['/'].includes(btn) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>{btn}</button>
-                        ))}
-                        {['4', '5', '6', '*'].map(btn => (
-                            <button key={btn} onClick={() => handleCalcInput(btn)} className={`h-14 rounded-2xl font-bold text-xl transition-all active:scale-95 ${['*'].includes(btn) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>{btn === '*' ? '×' : btn}</button>
-                        ))}
-                        {['1', '2', '3', '-'].map(btn => (
-                            <button key={btn} onClick={() => handleCalcInput(btn)} className={`h-14 rounded-2xl font-bold text-xl transition-all active:scale-95 ${['-'].includes(btn) ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200'}`}>{btn}</button>
-                        ))}
-                        <button onClick={() => handleCalcInput('C')} className="h-14 rounded-2xl font-bold text-xl bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 transition-all active:scale-95">C</button>
-                        <button onClick={() => handleCalcInput('0')} className="h-14 rounded-2xl font-bold text-xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all active:scale-95">0</button>
-                        <button onClick={() => handleCalcInput('.')} className="h-14 rounded-2xl font-bold text-xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all active:scale-95">.</button>
-                        <button onClick={() => handleCalcInput('+')} className="h-14 rounded-2xl font-bold text-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 transition-all active:scale-95">+</button>
-                    </div>
-
-                    <div className="flex gap-3 mt-4">
-                        <button onClick={() => handleCalcInput('back')} className="flex-1 py-4 bg-slate-200 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-300 font-bold transition-all active:scale-95 flex items-center justify-center">
-                            <Delete size={20} />
-                        </button>
-                        <button onClick={useCalcResult} className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-bold transition-all active:scale-95">
-                            Use Result
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* Goals Modal */}
-        {showGoalModal && (
-            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => { setShowGoalModal(false); resetGoalForm(); }}>
-                <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
-                    <h3 className="text-lg font-bold mb-4 dark:text-white">{editingGoal ? 'Edit Goal' : 'New Goal'}</h3>
-                    <input value={goalName} onChange={(e) => setGoalName(e.target.value)} placeholder="Goal Name" className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl mb-3 outline-none dark:text-white" />
-                    <input type="number" value={goalTarget} onChange={(e) => setGoalTarget(e.target.value)} placeholder="Target Amount" className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl mb-3 outline-none dark:text-white" />
-                    <input type="number" value={goalCurrent} onChange={(e) => setGoalCurrent(e.target.value)} placeholder="Current Saved" className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl mb-4 outline-none dark:text-white" />
-                    <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-                        {GOAL_COLORS.map(c => (
-                            <button key={c} onClick={() => setGoalColor(c)} className={`w-8 h-8 rounded-full flex-shrink-0 ${goalColor === c ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`} style={{ backgroundColor: c }} />
-                        ))}
-                    </div>
-                    <button onClick={handleSaveGoal} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Save</button>
-                    {editingGoal && <button onClick={() => { if(onDeleteGoal) onDeleteGoal(editingGoal.id); setShowGoalModal(false); }} className="w-full text-red-500 font-bold py-3 mt-2 text-sm">Delete</button>}
-                </div>
-            </div>
-        )}
     </div>
   );
 };
