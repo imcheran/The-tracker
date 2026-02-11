@@ -1,66 +1,226 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Habit, HabitLog, HabitFrequencyType, HabitSection } from '../types';
-import { Plus, ChevronRight, Check, Bell, Clock, User, Star, CloudSun, Menu, Zap, Calendar, ArrowRight, ArrowLeft, Trash2, Edit2, Share2, CheckCircle2, Activity, TrendingUp, RefreshCw, X, ChevronDown, ChevronLeft, Settings } from 'lucide-react';
-import { format, addDays, startOfWeek, isSameDay, isToday, isBefore, isAfter, startOfDay, eachDayOfInterval, startOfMonth, endOfMonth, getDaysInMonth, subMonths, addMonths, subWeeks, addWeeks, getDay } from 'date-fns';
-import { WheelPicker } from './Shared';
+import { Habit, HabitLog } from '../types';
+import { 
+  Plus, ChevronRight, Check, Bell, Clock, User, Star, CloudSun, Menu, Zap, Calendar, ArrowRight
+} from 'lucide-react';
+import { format, addDays, startOfWeek, isSameDay, isToday, isBefore, isAfter, startOfDay } from 'date-fns';
+import HabitFormSheet from './HabitFormSheet';
+import HabitDetailView from './HabitDetailView';
 
-// --- HabitFormSheet ---
-const ICONS = ['💧', '📚', '🏃', '🧘', '🍎', '💤', '🎸', '💰', '🧹', '💊'];
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-const HabitFormSheet: React.FC<{ isOpen: boolean; onClose: () => void; onSave: (habit: Habit) => void; initialData?: Habit; }> = ({ isOpen, onClose, onSave, initialData }) => {
-  const [name, setName] = useState(''); const [icon, setIcon] = useState(ICONS[0]); const [color, setColor] = useState(COLORS[0]);
-  const [frequencyType, setFrequencyType] = useState<HabitFrequencyType>('daily'); const [frequencyDays, setFrequencyDays] = useState<number[]>([0,1,2,3,4,5,6]);
-  useEffect(() => { if (isOpen) { if (initialData) { setName(initialData.name); setIcon(initialData.icon); setColor(initialData.color); } else { setName(''); setIcon(ICONS[0]); setColor(COLORS[0]); } } }, [isOpen, initialData]);
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[60] bg-slate-900 text-white flex flex-col pt-safe animate-in slide-in-from-bottom">
-        <div className="h-14 flex items-center justify-between px-4 border-b border-slate-800"><button onClick={onClose}><X/></button><span className="font-bold">Habit</span><button onClick={() => { onSave({ id: initialData?.id || Date.now().toString(), name, icon, color, frequencyType, frequencyDays, history: initialData?.history || {}, createdDate: new Date() } as Habit); onClose(); }}><Check/></button></div>
-        <div className="p-6 space-y-6"><input value={name} onChange={e => setName(e.target.value)} placeholder="Habit Name" className="w-full bg-slate-800 p-4 rounded-xl text-white outline-none" /><div className="flex gap-4">{ICONS.map(i => <button key={i} onClick={() => setIcon(i)} className={`p-2 rounded-full ${icon === i ? 'bg-slate-700' : ''}`}>{i}</button>)}</div></div>
-    </div>
-  );
-};
+interface HabitViewProps {
+  habits: Habit[];
+  onToggleHabit: (id: string, date: string) => void;
+  onUpdateHabit: (habit: Habit) => void;
+  onAddHabit: (habit: Habit) => void;
+  onDeleteHabit: (id: string) => void;
+  onMenuClick?: () => void;
+  onOpenStats: () => void;
+  onStartFocus?: (habitId: string) => void;
+  user?: any;
+}
 
-// --- HabitStatsView ---
-const HabitStatsView: React.FC<{ habits: Habit[]; onClose: () => void; }> = ({ habits, onClose }) => {
-    return <div className="flex-1 bg-white p-4"><button onClick={onClose} className="mb-4"><ChevronLeft/></button><h2 className="text-2xl font-bold mb-4">Statistics</h2>{habits.map(h => <div key={h.id} className="mb-4"><strong>{h.name}</strong>: {Object.keys(h.history).filter(d => h.history[d].completed).length} completions</div>)}</div>;
-};
+const HabitCard: React.FC<{
+    habit: Habit;
+    dateStr: string;
+    onToggle: () => void;
+    onClick: () => void;
+}> = ({ habit, dateStr, onToggle, onClick }) => {
+    const isCompleted = (habit.history?.[dateStr] as HabitLog | undefined)?.completed;
+    
+    // Calculate streak
+    const streak = Object.keys(habit.history || {}).filter(k => habit.history[k].completed).length;
 
-// --- HabitDetailView ---
-const HabitDetailView: React.FC<{ habit: Habit; onClose: () => void; onToggleCheck: (date: string) => void; onEdit: (h: Habit) => void; onDelete: (id: string) => void; }> = ({ habit, onClose, onToggleCheck, onEdit, onDelete }) => {
-    const [isEditing, setIsEditing] = useState(false);
     return (
-        <div className="fixed inset-0 z-[60] bg-black text-white flex flex-col pt-safe animate-in slide-in-from-right">
-            <div className="h-16 flex items-center justify-between px-4"><button onClick={onClose}><ChevronLeft/></button><span className="font-bold">{habit.name}</span><button onClick={() => setIsEditing(true)}><Edit2/></button></div>
-            <div className="p-4 text-center"><div className="text-6xl mb-4">{habit.icon}</div><div className="text-2xl font-bold mb-2">{habit.name}</div><button onClick={() => onDelete(habit.id)} className="text-red-500 mt-4">Delete Habit</button></div>
-            <HabitFormSheet isOpen={isEditing} onClose={() => setIsEditing(false)} onSave={onEdit} initialData={habit} />
+        <div 
+            onClick={onClick}
+            className={`
+                relative aspect-square p-4 rounded-[28px] border transition-all duration-500 cursor-pointer flex flex-col justify-between group bento-card overflow-hidden
+                ${isCompleted 
+                    ? 'border-transparent text-white shadow-xl scale-[1.02]' 
+                    : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-emerald-200'
+                }
+            `}
+            style={{ 
+                backgroundColor: isCompleted ? habit.color : undefined,
+                boxShadow: isCompleted ? `0 10px 40px -10px ${habit.color}80` : undefined
+            }}
+        >
+            {/* Background Icon (Decorative) */}
+            <div className={`absolute -right-2 -bottom-2 text-8xl opacity-10 pointer-events-none transition-transform duration-500 group-hover:scale-110 ${isCompleted ? 'text-white' : 'grayscale'}`}>
+                {habit.icon}
+            </div>
+
+            {/* Glowing Effect for Completed */}
+            {isCompleted && <div className="absolute inset-0 bg-white/20 blur-xl opacity-50 rounded-full" />}
+
+            <div className="flex justify-between items-start z-10 relative">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-colors ${isCompleted ? 'bg-white/20 text-white backdrop-blur-sm shadow-inner' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                    {habit.icon}
+                </div>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onToggle(); }}
+                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 active:scale-90 ${isCompleted ? 'bg-white text-current border-white shadow-lg' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-400 bg-white dark:bg-slate-800'}`}
+                    style={{ color: isCompleted ? habit.color : undefined }}
+                >
+                    {isCompleted && <Check size={20} strokeWidth={4} />}
+                </button>
+            </div>
+
+            <div className="z-10 relative">
+                <h3 className={`font-bold text-lg leading-tight mb-1 truncate ${isCompleted ? 'text-white drop-shadow-md' : 'text-slate-800 dark:text-slate-100'}`}>
+                    {habit.name}
+                </h3>
+                <div className={`text-xs font-bold ${isCompleted ? 'text-white/90' : 'text-slate-400'}`}>
+                    {streak} Day Streak
+                </div>
+            </div>
         </div>
     );
 };
 
-// --- HabitView (Main) ---
-const HabitView: React.FC<{ habits: Habit[]; onToggleHabit: (id: string, date: string) => void; onUpdateHabit: (h: Habit) => void; onAddHabit: (h: Habit) => void; onDeleteHabit: (id: string) => void; onMenuClick: () => void; onOpenStats: () => void; }> = ({ habits, onToggleHabit, onUpdateHabit, onAddHabit, onDeleteHabit, onMenuClick, onOpenStats }) => {
+const HabitView: React.FC<HabitViewProps> = React.memo(({ 
+    habits, onToggleHabit, onUpdateHabit, onAddHabit, onDeleteHabit, onMenuClick, onOpenStats, onStartFocus, user
+}) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const selectedHabit = habits.find(h => h.id === selectedHabitId);
-  
-  if (selectedHabit) return <HabitDetailView habit={selectedHabit} onClose={() => setSelectedHabitId(null)} onToggleCheck={(d) => onToggleHabit(selectedHabit.id, d)} onEdit={onUpdateHabit} onDelete={onDeleteHabit} />;
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [greeting, setGreeting] = useState('');
+
+  const selectedHabit = useMemo(() => 
+    habits.find(h => h.id === selectedHabitId) || null
+  , [habits, selectedHabitId]);
+
+  useEffect(() => {
+    const updateGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) setGreeting('Good Morning');
+        else if (hour < 18) setGreeting('Good Afternoon');
+        else setGreeting('Good Evening');
+    };
+    updateGreeting();
+  }, []);
+
+  const calendarDays = useMemo(() => {
+      const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  }, [selectedDate]);
+
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  // Filter habits based on Start Date and End Date
+  const filteredHabits = useMemo(() => {
+      const selectedDayStart = startOfDay(selectedDate);
+      return habits.filter(h => {
+          if (h.isArchived) return false;
+          if (h.startDate && isBefore(selectedDayStart, startOfDay(new Date(h.startDate)))) return false;
+          if (h.endDate && isAfter(selectedDayStart, startOfDay(new Date(h.endDate)))) return false;
+          return true;
+      });
+  }, [habits, selectedDate]);
+
+  if (selectedHabit) {
+      return (
+          <HabitDetailView 
+              habit={selectedHabit}
+              onClose={() => setSelectedHabitId(null)}
+              onToggleCheck={(date) => onToggleHabit(selectedHabit.id, date)}
+              onEdit={onUpdateHabit}
+              onDelete={onDeleteHabit}
+              onStartFocus={() => onStartFocus && onStartFocus(selectedHabit.id)}
+              onOpenStats={onOpenStats}
+          />
+      );
+  }
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950">
-        <div className="pt-safe px-4 pb-4"><div className="flex justify-between items-center mb-4"><div className="flex items-center gap-2"><button onClick={onMenuClick} className="md:hidden"><Menu/></button><h1 className="text-2xl font-bold dark:text-white">Habits</h1></div><button onClick={onOpenStats}><Activity/></button></div><div className="flex gap-2 overflow-x-auto no-scrollbar">{eachDayOfInterval({start: startOfWeek(selectedDate), end: addDays(startOfWeek(selectedDate), 6)}).map(day => <button key={day.toString()} onClick={() => setSelectedDate(day)} className={`flex-1 p-2 rounded-xl text-center ${isSameDay(day, selectedDate) ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-slate-800'}`}><div className="text-xs">{format(day, 'EEE')}</div><div className="font-bold">{format(day, 'd')}</div></button>)}</div></div>
-        <div className="flex-1 overflow-y-auto px-4 pb-32 grid grid-cols-2 gap-4">
-            {habits.map(h => {
-                const isDone = h.history[format(selectedDate, 'yyyy-MM-dd')]?.completed;
-                return <div key={h.id} onClick={() => setSelectedHabitId(h.id)} className={`aspect-square rounded-3xl p-4 flex flex-col justify-between transition-all ${isDone ? 'text-white' : 'bg-white dark:bg-slate-900'}`} style={{backgroundColor: isDone ? h.color : undefined}}><div className="flex justify-between"><span className="text-2xl">{h.icon}</span><button onClick={(e)=>{e.stopPropagation();onToggleHabit(h.id, format(selectedDate, 'yyyy-MM-dd'))}} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${isDone?'bg-white text-black':'border-slate-200'}`}>{isDone && <Check size={16}/>}</button></div><span className="font-bold">{h.name}</span></div>
-            })}
-            <button onClick={() => setShowAdd(true)} className="aspect-square rounded-3xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400"><Plus size={32}/></button>
+    <div className="h-full flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950">
+        
+        {/* Header - Safe Area Wrapper */}
+        <div className="pt-[calc(env(safe-area-inset-top)+1rem)] shrink-0 px-4 z-20">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-sm rounded-[32px] p-5 flex flex-col gap-5">
+                <div className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <button onClick={onMenuClick} className="md:hidden p-2 -ml-2 text-slate-500 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                <Menu size={24}/>
+                            </button>
+                            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{greeting}</h1>
+                        </div>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest pl-1">Keep up the momentum</p>
+                    </div>
+                    <button onClick={onOpenStats} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-300 hover:scale-105 transition-transform shadow-sm">
+                        <ArrowRight size={20} />
+                    </button>
+                </div>
+
+                {/* Calendar Strip */}
+                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 p-1.5 rounded-2xl">
+                    {calendarDays.map(day => {
+                        const isSelected = isSameDay(day, selectedDate);
+                        const isTodayDate = isToday(day);
+                        return (
+                            <button 
+                                key={day.toString()}
+                                onClick={() => setSelectedDate(day)}
+                                className={`
+                                    flex flex-col items-center justify-center flex-1 h-14 rounded-xl transition-all duration-300
+                                    ${isSelected 
+                                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 scale-105' 
+                                        : 'text-slate-400 dark:text-slate-500 hover:bg-white dark:hover:bg-slate-800'
+                                    }
+                                `}
+                            >
+                                <span className={`text-[10px] font-bold mb-0.5 uppercase ${isSelected ? 'text-emerald-100' : ''}`}>{format(day, 'EEE')}</span>
+                                <span className={`text-sm font-bold ${isTodayDate && !isSelected ? 'text-emerald-500' : ''}`}>{format(day, 'd')}</span>
+                                {isTodayDate && !isSelected && <div className="w-1 h-1 bg-emerald-500 rounded-full mt-0.5"></div>}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
-        <HabitFormSheet isOpen={showAdd} onClose={() => setShowAdd(false)} onSave={onAddHabit} />
+
+        {/* Habit Grid Content */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-32 pt-6 z-10 relative">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-slide-up">
+                {filteredHabits.map(habit => (
+                    <HabitCard 
+                        key={habit.id}
+                        habit={habit}
+                        dateStr={selectedDateStr}
+                        onToggle={() => onToggleHabit(habit.id, selectedDateStr)}
+                        onClick={() => setSelectedHabitId(habit.id)}
+                    />
+                ))}
+                
+                {/* Add New Card */}
+                <button 
+                    onClick={() => setShowAddSheet(true)}
+                    className="aspect-square rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-2 text-slate-400 hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-all group"
+                >
+                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                        <Plus size={24} />
+                    </div>
+                    <span className="font-bold text-sm">New Habit</span>
+                </button>
+            </div>
+
+            {filteredHabits.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 opacity-40 text-slate-400">
+                    <Star size={64} className="mb-4 stroke-1" />
+                    <p className="font-bold text-lg">No habits for this day</p>
+                </div>
+            )}
+        </div>
+
+        <HabitFormSheet 
+            isOpen={showAddSheet}
+            onClose={() => setShowAddSheet(false)}
+            onSave={(habit) => { onAddHabit(habit); setShowAddSheet(false); }}
+        />
     </div>
   );
-};
+});
 
 export default HabitView;
-export { HabitStatsView }; // Export named for direct use if needed
