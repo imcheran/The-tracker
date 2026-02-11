@@ -9,12 +9,14 @@ import {
   Notebook, Gift, CircleDot, CreditCard, User, Banknote, Landmark, CircleDollarSign,
   ArrowUpCircle, ArrowDownCircle, Trash2, Edit2, Users, Pencil, CheckCircle, Target, PiggyBank, Briefcase, Car, Home,
   Calendar, RotateCw, Play, Pause, ExternalLink, BarChart3, Clock, Download, FileText, Smartphone, Monitor, ShoppingCart, Coffee,
-  Heart, Users2, Split, BarChart2, Eye, Activity, Percent, ChevronDown, Coins, Calculator, Delete, MoreHorizontal
+  Heart, Users2, Split, BarChart2, Eye, Activity, Percent, ChevronDown, Coins, Calculator, Delete, MoreHorizontal,
+  ArrowRightLeft,
+  CalendarDays
 } from 'lucide-react';
 import { 
   format, isWithinInterval, isToday, eachDayOfInterval, 
   getDay, addMonths, isSameDay, addDays, isThisMonth, addYears, isBefore, differenceInDays, isYesterday,
-  subMonths, startOfMonth, endOfMonth, parseISO
+  subMonths, startOfMonth, endOfMonth, parseISO, startOfYear
 } from 'date-fns';
 import { getFinancialInsights } from '../services/aiService';
 import { loadFromStorage, saveToStorage } from '../services/storageService';
@@ -64,15 +66,6 @@ const ICON_MAP: Record<string, any> = {
 
 const GOAL_ICONS = ['target', 'piggy-bank', 'plane', 'car', 'home', 'briefcase', 'gift'];
 const GOAL_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-const GROUPED_CATEGORIES = {
-    'Food & Drink': [{ name: 'Food', icon: 'utensils-crossed' }, { name: 'Dining Out', icon: 'utensils-crossed' }, { name: 'Coffee', icon: 'coffee' }, { name: 'Groceries', icon: 'shopping-cart' }],
-    'Shopping': [{ name: 'Shopping', icon: 'shopping-bag' }, { name: 'Clothing', icon: 'shopping-bag' }, { name: 'Electronics', icon: 'monitor' }],
-    'Transport': [{ name: 'Transportation', icon: 'bus' }, { name: 'Fuel', icon: 'car' }, { name: 'Taxi', icon: 'car' }],
-    'Bills & Utilities': [{ name: 'Utilities', icon: 'wifi' }, { name: 'Phone', icon: 'smartphone' }, { name: 'Internet', icon: 'wifi' }, { name: 'Rent', icon: 'home' }],
-    'Life': [{ name: 'Entertainment', icon: 'gamepad-2' }, { name: 'Healthcare', icon: 'bandaid' }, { name: 'Education', icon: 'notebook' }, { name: 'Travel', icon: 'plane' }, { name: 'Gifts', icon: 'gift' }],
-    'Other': [{ name: 'Other', icon: 'circle-dot' }]
-};
 
 const normalizeCategory = (catName: string) => {
     if (catName === 'Transport') return 'Transportation';
@@ -132,6 +125,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   // Workspace Toggle: 'personal' or 'joint'
   const [workspaceMode, setWorkspaceMode] = useState<'personal' | 'joint'>('personal');
 
+  // Filters
+  const [txnFilterType, setTxnFilterType] = useState<'all' | 'credit' | 'debit'>('all');
+  const [txnSearch, setTxnSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [excludeCategories, setExcludeCategories] = useState<string[]>([]);
+
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
@@ -140,26 +139,27 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
   const [currency, setCurrency] = useState(() => loadFromStorage('finance_currency', { code: 'INR', symbol: '₹' }));
   
-  const [selectedDebtorId, setSelectedDebtorId] = useState<string | null>(null);
-  const [showDebtorModal, setShowDebtorModal] = useState(false);
-  const [showDebtModal, setShowDebtModal] = useState(false);
+  // Modals
   const [showGoalModal, setShowGoalModal] = useState(false);
-  const [showSubModal, setShowSubModal] = useState(false);
-  const [showInvModal, setShowInvModal] = useState(false);
   const [showGoalDeposit, setShowGoalDeposit] = useState<{ id: string, name: string } | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
+  
+  const [showDebtorModal, setShowDebtorModal] = useState(false);
+  const [showDebtRecordModal, setShowDebtRecordModal] = useState<{ debtorId: string, name: string } | null>(null);
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [showInvModal, setShowInvModal] = useState(false);
 
   // Balance Adjustment
   const [adjustAccount, setAdjustAccount] = useState<{name: string, type: string, current: number} | null>(null);
   const [adjustAmount, setAdjustAmount] = useState('');
 
-  // Form States
+  // Form States - Debts
   const [debtorName, setDebtorName] = useState('');
-  const [debtorType, setDebtorType] = useState('Person');
-  const [debtAmount, setDebtAmount] = useState('');
+  const [debtType, setDebtType] = useState<'Borrow' | 'Lend'>('Lend');
+  const [debtAmountVal, setDebtAmountVal] = useState('');
   const [debtDesc, setDebtDesc] = useState('');
-  const [debtActionType, setDebtActionType] = useState<'Borrow' | 'Lend'>('Borrow');
-  
+
+  // Form States - Goal
   const [goalName, setGoalName] = useState('');
   const [goalTarget, setGoalTarget] = useState('');
   const [goalCurrent, setGoalCurrent] = useState('0');
@@ -167,21 +167,18 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   const [goalColor, setGoalColor] = useState(GOAL_COLORS[0]);
   const [goalDeadline, setGoalDeadline] = useState('');
 
+  // Form States - Subscriptions
   const [subName, setSubName] = useState('');
   const [subPrice, setSubPrice] = useState('');
   const [subPeriod, setSubPeriod] = useState<'Monthly' | 'Yearly'>('Monthly');
-  const [subDate, setSubDate] = useState('');
-  const [subUrl, setSubUrl] = useState('');
+  const [subStartDate, setSubStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
+  // Form States - Investments
   const [invName, setInvName] = useState('');
-  const [invUnits, setInvUnits] = useState('');
-  const [invPrice, setInvPrice] = useState('');
-  const [invDate, setInvDate] = useState('');
+  const [invAmount, setInvAmount] = useState('');
   const [invType, setInvType] = useState<'Stock' | 'Crypto' | 'Mutual Fund' | 'Gold' | 'Real Estate' | 'Other'>('Stock');
 
-  const [isSyncingSms, setIsSyncingSms] = useState(false);
-
-  // Transaction Input
+  // Form States - Transaction
   const [amount, setAmount] = useState('');
   const [merchant, setMerchant] = useState('');
   const [type, setType] = useState<'credit'|'debit'>('debit');
@@ -250,37 +247,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       return val.toLocaleString('en-US', { style: 'currency', currency: currency.code, maximumFractionDigits: 0 });
   };
 
-  // --- Calculator Logic ---
-  const handleCalcInput = (key: string) => {
-      if (key === 'C') {
-          setCalcDisplay('0');
-      } else if (key === '=') {
-          try {
-              // eslint-disable-next-line no-new-func
-              const result = new Function('return ' + calcDisplay)();
-              setCalcDisplay(String(result));
-          } catch (e) {
-              setCalcDisplay('Error');
-          }
-      } else if (key === 'back') {
-          setCalcDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
-      } else {
-          setCalcDisplay(prev => prev === '0' || prev === 'Error' ? key : prev + key);
-      }
-  };
-
-  const useCalcResult = () => {
-      try {
-          // eslint-disable-next-line no-new-func
-          const result = new Function('return ' + calcDisplay)();
-          setAmount(String(Math.round(result * 100) / 100)); // Round to 2 decimal places
-          setShowCalculator(false);
-          setCalcDisplay('0');
-      } catch (e) {
-          // ignore error
-      }
-  };
-
   // --- Workspace Data Logic ---
   
   const activeTransactions = useMemo(() => {
@@ -296,16 +262,25 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       return [...activeTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [activeTransactions]);
 
+  const filteredTransactions = useMemo(() => {
+      return allTransactionsSorted.filter(t => {
+          if (txnFilterType !== 'all' && t.type !== txnFilterType) return false;
+          if (txnSearch && !t.merchant.toLowerCase().includes(txnSearch.toLowerCase()) && !t.category.toLowerCase().includes(txnSearch.toLowerCase())) return false;
+          if (excludeCategories.includes(t.category)) return false;
+          return true;
+      });
+  }, [allTransactionsSorted, txnFilterType, txnSearch, excludeCategories]);
+
   const monthTransactions = useMemo(() => {
       const start = startOfMonth(currentMonth);
       const end = endOfMonth(currentMonth);
-      return allTransactionsSorted.filter(t => t.date && isWithinInterval(parseISO(t.date), { start, end }));
-  }, [allTransactionsSorted, currentMonth]);
+      return filteredTransactions.filter(t => t.date && isWithinInterval(parseISO(t.date), { start, end }));
+  }, [filteredTransactions, currentMonth]);
 
   const groupedTransactions = useMemo(() => {
       const groups: Record<string, Transaction[]> = {};
       monthTransactions.forEach(t => {
-          if (t.exclude_from_budget) return; // Skip excluded transactions in list
+          if (t.exclude_from_budget) return; 
           if (!groups[t.date]) groups[t.date] = [];
           groups[t.date].push(t);
       });
@@ -315,22 +290,31 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   const stats = useMemo(() => {
       let income = 0;
       let expense = 0;
-      monthTransactions.forEach(t => {
+      // Use original list for accurate stats, applying ONLY the excludes to filter out non-spending
+      // But keep month filter
+      const start = startOfMonth(currentMonth);
+      const end = endOfMonth(currentMonth);
+      const periodTxns = allTransactionsSorted.filter(t => t.date && isWithinInterval(parseISO(t.date), { start, end }));
+
+      periodTxns.forEach(t => {
           if (t.exclude_from_budget) return;
+          // Apply excludeCategories logic to stats if user wants to filter them out of view
+          if (excludeCategories.includes(t.category)) return;
+
           if (t.type === 'credit') income += t.amount;
           else expense += t.amount;
       });
       
       return { income, expense, balance: income - expense };
-  }, [monthTransactions]);
+  }, [allTransactionsSorted, currentMonth, excludeCategories]);
 
   const accountBalances = useMemo(() => {
       const acc = { cash: 0, bank: 0, credit: 0 };
       allTransactionsSorted.forEach(t => {
           const val = t.type === 'credit' ? t.amount : -t.amount;
           if (t.payment_method === 'Cash') acc.cash += val;
-          else if (t.payment_method === 'Credit Card') acc.credit += val; // Usually negative if expense
-          else acc.bank += val; // UPI, Bank Transfer, Debit Card
+          else if (t.payment_method === 'Credit Card') acc.credit += val; 
+          else acc.bank += val; 
       });
       return acc;
   }, [allTransactionsSorted]);
@@ -342,13 +326,13 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       return days.map(day => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const dayTxns = monthTransactions.filter(t => t.date === dateStr);
-          // Strictly exclude 'exclude_from_budget' items from the graph
           const income = dayTxns.filter(t => t.type === 'credit' && !t.exclude_from_budget).reduce((sum, t) => sum + t.amount, 0);
           const expense = dayTxns.filter(t => t.type === 'debit' && !t.exclude_from_budget).reduce((sum, t) => sum + t.amount, 0);
           return { name: format(day, 'd'), income, expense };
       });
   }, [monthTransactions, currentMonth]);
 
+  // Actions
   const handleManualSubmit = () => {
       if (!amount || !merchant) return;
       const amtVal = parseFloat(amount);
@@ -391,7 +375,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       
       const isCredit = diff > 0;
       
-      // Create adjustment transaction that doesn't affect budget
       const adjustmentTx: Transaction = {
           id: Date.now().toString(),
           is_transaction: true,
@@ -405,7 +388,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           raw_sms: '',
           createdAt: new Date(),
           updatedAt: new Date(),
-          exclude_from_budget: true, // Key: Exclude from spending graph
+          exclude_from_budget: true, 
           isShared: false,
           paidBy: user?.uid
       };
@@ -414,6 +397,8 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       setAdjustAccount(null);
       setAdjustAmount('');
   };
+
+  // --- Handlers for Goals, Debts, etc ---
 
   const handleSaveGoal = () => {
       if (!goalName || !goalTarget || !onAddGoal || !onUpdateGoal) return;
@@ -461,9 +446,112 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       setDepositAmount('');
   };
 
+  const handleAddDebtor = () => {
+      if (!debtorName.trim()) return;
+      if (onAddDebtor) onAddDebtor({
+          id: Date.now().toString(),
+          name: debtorName,
+          type: 'Person',
+          createdAt: new Date(),
+          updatedAt: new Date()
+      });
+      setDebtorName('');
+      setShowDebtorModal(false);
+  };
+
+  const handleAddDebtRecord = () => {
+      if (!showDebtRecordModal || !debtAmountVal || !onAddDebt) return;
+      const amt = parseFloat(debtAmountVal);
+      if (isNaN(amt)) return;
+
+      onAddDebt({
+          id: Date.now().toString(),
+          debtorId: showDebtRecordModal.debtorId,
+          amount: amt,
+          type: debtType,
+          description: debtDesc || 'Loan',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          createdAt: new Date(),
+          updatedAt: new Date()
+      });
+
+      // Optional: Add Transaction
+      onAddTransaction({
+          id: Date.now().toString(),
+          is_transaction: true,
+          amount: amt,
+          type: debtType === 'Lend' ? 'debit' : 'credit',
+          merchant: showDebtRecordModal.name,
+          category: 'Debt',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          payment_method: 'Cash',
+          notes: debtDesc,
+          raw_sms: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+      });
+
+      setDebtAmountVal('');
+      setDebtDesc('');
+      setShowDebtRecordModal(null);
+  };
+
+  const handleAddSubscription = () => {
+      if (!subName || !subPrice || !onAddSubscription) return;
+      onAddSubscription({
+          id: editingSubscription ? editingSubscription.id : Date.now().toString(),
+          name: subName,
+          price: parseFloat(subPrice),
+          period: subPeriod,
+          startDate: subStartDate,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+      });
+      setShowSubModal(false);
+      setSubName('');
+      setSubPrice('');
+      setEditingSubscription(null);
+  };
+
+  const handleAddInvestment = () => {
+      if (!invName || !invAmount || !onAddInvestment) return;
+      onAddInvestment({
+          id: editingInvestment ? editingInvestment.id : Date.now().toString(),
+          name: invName,
+          units: 1, // Simplified for now
+          avgPrice: parseFloat(invAmount),
+          type: invType,
+          date: format(new Date(), 'yyyy-MM-dd'),
+          createdAt: new Date(),
+          updatedAt: new Date()
+      });
+      
+      // Track as expense
+      onAddTransaction({
+          id: Date.now().toString(),
+          is_transaction: true,
+          amount: parseFloat(invAmount),
+          type: 'debit',
+          merchant: invName,
+          category: 'Investment',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          payment_method: 'Bank Transfer',
+          raw_sms: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+      });
+
+      setShowInvModal(false);
+      setInvName('');
+      setInvAmount('');
+      setEditingInvestment(null);
+  };
+
+  // --- Renderers ---
+
   const renderOverview = () => (
       <div className="space-y-6 animate-in fade-in pb-20 p-4">
-          
           <div className="flex justify-center mb-2">
               <div className="bg-slate-100 dark:bg-slate-900 p-1 rounded-full flex relative shadow-inner">
                   <button onClick={() => setWorkspaceMode('personal')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all z-10 ${workspaceMode === 'personal' ? 'text-white' : 'text-slate-500'}`}>Personal</button>
@@ -502,7 +590,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                       </AreaChart>
                   </ResponsiveContainer>
               </div>
-              {/* 3-Column Grid for Income, Expense, Total Balance */}
               <div className="grid grid-cols-3 gap-3 mt-4">
                   <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3">
                       <div className="text-[10px] text-emerald-600 font-bold uppercase mb-1">Income</div>
@@ -522,22 +609,154 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           <div>
               <h3 className="font-bold text-slate-800 dark:text-white mb-3 px-1">Accounts</h3>
               <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                  <AccountCard 
-                    name="Cash" type="Cash" amount={accountBalances.cash} currency={currency.symbol} 
-                    onEdit={() => setAdjustAccount({ name: 'Cash', type: 'Cash', current: accountBalances.cash })}
-                  />
-                  <AccountCard 
-                    name="Bank" type="Bank" amount={accountBalances.bank} currency={currency.symbol} 
-                    onEdit={() => setAdjustAccount({ name: 'Bank', type: 'Bank', current: accountBalances.bank })}
-                  />
-                  <AccountCard 
-                    name="Cards" type="Credit Card" amount={accountBalances.credit} currency={currency.symbol} 
-                    onEdit={() => setAdjustAccount({ name: 'Credit Card', type: 'Credit Card', current: accountBalances.credit })}
-                  />
+                  <AccountCard name="Cash" type="Cash" amount={accountBalances.cash} currency={currency.symbol} onEdit={() => setAdjustAccount({ name: 'Cash', type: 'Cash', current: accountBalances.cash })} />
+                  <AccountCard name="Bank" type="Bank" amount={accountBalances.bank} currency={currency.symbol} onEdit={() => setAdjustAccount({ name: 'Bank', type: 'Bank', current: accountBalances.bank })} />
+                  <AccountCard name="Cards" type="Credit Card" amount={accountBalances.credit} currency={currency.symbol} onEdit={() => setAdjustAccount({ name: 'Credit Card', type: 'Credit Card', current: accountBalances.credit })} />
               </div>
           </div>
       </div>
   );
+
+  const renderTransactions = () => (
+      <div className="p-4 space-y-4 pb-24 h-full flex flex-col">
+          {/* Filters */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+              <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-lg border transition-colors ${showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500'}`}>
+                  <Filter size={18} />
+              </button>
+              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                  {(['all', 'credit', 'debit'] as const).map(t => (
+                      <button key={t} onClick={() => setTxnFilterType(t)} className={`px-3 py-1.5 text-xs font-bold rounded-md capitalize transition-all ${txnFilterType === t ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}>{t}</button>
+                  ))}
+              </div>
+              <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center px-3 gap-2">
+                  <Search size={16} className="text-slate-400" />
+                  <input value={txnSearch} onChange={(e) => setTxnSearch(e.target.value)} placeholder="Search..." className="bg-transparent border-none outline-none text-xs w-full h-8 text-slate-700 dark:text-slate-200" />
+              </div>
+          </div>
+
+          {showFilters && (
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase mb-3">Exclude Categories</h4>
+                  <div className="flex flex-wrap gap-2">
+                      {['Savings', 'Debt', 'Subscription', 'Investment', 'Transfer'].map(cat => {
+                          const isActive = excludeCategories.includes(cat);
+                          return (
+                              <button 
+                                key={cat}
+                                onClick={() => isActive ? setExcludeCategories(excludeCategories.filter(c => c !== cat)) : setExcludeCategories([...excludeCategories, cat])}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${isActive ? 'bg-red-50 border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-800' : 'bg-white border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                              >
+                                  {isActive ? 'Hide' : 'Show'} {cat}
+                              </button>
+                          )
+                      })}
+                  </div>
+              </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4">
+              {groupedTransactions.map(([date, txns]) => (
+                  <div key={date}>
+                      <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 px-1">{format(parseISO(date), 'EEEE, MMM d')}</h3>
+                      <div className="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                          {txns.map((t, i) => (
+                              <div key={t.id} onClick={() => setEditingTransaction(t)} className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${i !== txns.length - 1 ? 'border-b border-slate-50 dark:border-slate-800' : ''}`}>
+                                  <div className="flex items-center gap-4">
+                                      <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm border border-slate-100 dark:border-slate-700">
+                                          {(() => {
+                                              const cat = normalizeCategory(t.category);
+                                              const iconKey = DEFAULT_CATEGORIES.find(c => c.name === cat)?.icon || 'circle-dot';
+                                              const IconComp = ICON_MAP[iconKey] || CircleDot;
+                                              return <IconComp size={20} />;
+                                          })()}
+                                      </div>
+                                      <div>
+                                          <div className="font-bold text-slate-800 dark:text-white text-sm mb-0.5">{t.merchant}</div>
+                                          <div className="text-xs text-slate-400 flex items-center gap-1 font-medium">
+                                              {t.category} 
+                                              {t.isShared && <Users size={12} className="text-purple-500 ml-1"/>}
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <span className={`font-bold text-sm ${t.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+                                      {t.type === 'credit' ? '+' : '-'}{formatCurrency(t.amount)}
+                                  </span>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              ))}
+              {groupedTransactions.length === 0 && (
+                  <div className="text-center py-20 text-slate-400">
+                      <Search size={48} className="mx-auto mb-4 opacity-20"/>
+                      <p>No transactions found.</p>
+                  </div>
+              )}
+          </div>
+      </div>
+  );
+
+  const renderDebts = () => {
+      const totalLent = debts.filter(d => d.type === 'Lend').reduce((sum, d) => sum + d.amount, 0);
+      const totalBorrowed = debts.filter(d => d.type === 'Borrow').reduce((sum, d) => sum + d.amount, 0);
+      const net = totalLent - totalBorrowed;
+
+      return (
+          <div className="p-4 space-y-6 pb-24">
+              <div className="bg-slate-900 text-white p-6 rounded-[28px] shadow-lg">
+                  <div className="text-xs font-bold text-slate-400 uppercase mb-1">Net Position</div>
+                  <div className={`text-3xl font-black mb-6 ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</div>
+                  <div className="flex gap-4">
+                      <div className="flex-1 bg-white/10 rounded-xl p-3">
+                          <div className="text-[10px] text-slate-300 font-bold uppercase mb-1 flex items-center gap-1"><ArrowUpCircle size={12}/> I Owe</div>
+                          <div className="font-bold text-red-300">{formatCurrency(totalBorrowed)}</div>
+                      </div>
+                      <div className="flex-1 bg-white/10 rounded-xl p-3">
+                          <div className="text-[10px] text-slate-300 font-bold uppercase mb-1 flex items-center gap-1"><ArrowDownCircle size={12}/> Owed to Me</div>
+                          <div className="font-bold text-emerald-300">{formatCurrency(totalLent)}</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div>
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold text-slate-800 dark:text-white">People</h3>
+                      <button onClick={() => setShowDebtorModal(true)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"><Plus size={18}/></button>
+                  </div>
+                  <div className="space-y-3">
+                      {debtors.map(debtor => {
+                          const debtorDebts = debts.filter(d => d.debtorId === debtor.id);
+                          const balance = debtorDebts.reduce((sum, d) => sum + (d.type === 'Lend' ? d.amount : -d.amount), 0);
+                          return (
+                              <div key={debtor.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                                          {debtor.name[0]}
+                                      </div>
+                                      <div>
+                                          <div className="font-bold text-slate-900 dark:text-white">{debtor.name}</div>
+                                          <div className="text-xs text-slate-500">{debtorDebts.length} records</div>
+                                      </div>
+                                  </div>
+                                  <div className="text-right">
+                                      <div className={`font-bold ${balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                          {balance > 0 ? 'Owes you' : balance < 0 ? 'You owe' : 'Settled'}
+                                      </div>
+                                      <div className="text-sm font-black text-slate-800 dark:text-white">{formatCurrency(Math.abs(balance))}</div>
+                                  </div>
+                                  <button onClick={() => setShowDebtRecordModal({ debtorId: debtor.id, name: debtor.name })} className="ml-2 p-2 text-slate-400 hover:bg-slate-50 rounded-lg">
+                                      <Plus size={18}/>
+                                  </button>
+                              </div>
+                          )
+                      })}
+                      {debtors.length === 0 && <div className="text-center py-10 text-slate-400">Add people to track debts with.</div>}
+                  </div>
+              </div>
+          </div>
+      );
+  };
 
   const renderGoals = () => (
       <div className="p-4 space-y-4 pb-24">
@@ -595,6 +814,87 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       </div>
   );
 
+  const renderSubscriptions = () => {
+      const monthlyTotal = subscriptions.reduce((acc, s) => acc + (s.period === 'Monthly' ? s.price : s.price / 12), 0);
+      return (
+          <div className="p-4 space-y-6 pb-24">
+              <div className="bg-slate-900 text-white p-6 rounded-[28px] shadow-lg flex justify-between items-center">
+                  <div>
+                      <div className="text-xs font-bold text-slate-400 uppercase mb-1">Monthly Cost</div>
+                      <div className="text-3xl font-black">{formatCurrency(monthlyTotal)}</div>
+                  </div>
+                  <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                      <RotateCw size={24} className="text-slate-300"/>
+                  </div>
+              </div>
+
+              <div>
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold text-slate-800 dark:text-white">Active Subscriptions</h3>
+                      <button onClick={() => setShowSubModal(true)} className="p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-colors"><Plus size={20}/></button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                      {subscriptions.map(sub => (
+                          <div key={sub.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 font-bold text-xl">
+                                      {sub.name[0]}
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-slate-900 dark:text-white">{sub.name}</div>
+                                      <div className="text-xs text-slate-500">{sub.period} • {formatCurrency(sub.price)}</div>
+                                  </div>
+                              </div>
+                              <div className="text-right">
+                                  <div className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 px-2 py-1 rounded-lg">
+                                      {format(new Date(sub.startDate), 'MMM d')}
+                                  </div>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
+  const renderInvestments = () => {
+      const totalInv = investments.reduce((acc, i) => acc + (i.units * i.avgPrice), 0); // Simplified value
+      return (
+          <div className="p-4 space-y-6 pb-24">
+              <div className="bg-slate-900 text-white p-6 rounded-[28px] shadow-lg">
+                  <div className="text-xs font-bold text-slate-400 uppercase mb-1">Portfolio Value</div>
+                  <div className="text-3xl font-black">{formatCurrency(totalInv)}</div>
+                  <div className="flex gap-2 mt-4">
+                      <span className="text-xs bg-white/10 px-2 py-1 rounded text-slate-300">Stocks</span>
+                      <span className="text-xs bg-white/10 px-2 py-1 rounded text-slate-300">Crypto</span>
+                  </div>
+              </div>
+
+              <div>
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold text-slate-800 dark:text-white">Assets</h3>
+                      <button onClick={() => setShowInvModal(true)} className="p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-colors"><Plus size={20}/></button>
+                  </div>
+                  <div className="space-y-3">
+                      {investments.map(inv => (
+                          <div key={inv.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                              <div>
+                                  <div className="font-bold text-slate-900 dark:text-white">{inv.name}</div>
+                                  <div className="text-xs text-slate-500">{inv.type} • {inv.units} units</div>
+                              </div>
+                              <div className="text-right">
+                                  <div className="font-bold text-slate-900 dark:text-white">{formatCurrency(inv.units * inv.avgPrice)}</div>
+                                  <div className="text-[10px] text-emerald-500 font-bold">+0.0%</div>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
         {/* Header */}
@@ -631,44 +931,70 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
             {activeTab === 'overview' && renderOverview()}
-            {activeTab === 'transactions' && (
-                <div className="p-4 space-y-6">
-                    {groupedTransactions.map(([date, txns]) => (
-                        <div key={date}>
-                            <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 px-1">{format(parseISO(date), 'EEEE, MMM d')}</h3>
-                            <div className="bg-white dark:bg-slate-900 rounded-[24px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
-                                {txns.map((t, i) => (
-                                    <div key={t.id} onClick={() => setEditingTransaction(t)} className={`flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${i !== txns.length - 1 ? 'border-b border-slate-50 dark:border-slate-800' : ''}`}>
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 shadow-sm border border-slate-100 dark:border-slate-700">
-                                                {(() => {
-                                                    const cat = normalizeCategory(t.category);
-                                                    const iconKey = DEFAULT_CATEGORIES.find(c => c.name === cat)?.icon || 'circle-dot';
-                                                    const IconComp = ICON_MAP[iconKey] || CircleDot;
-                                                    return <IconComp size={20} />;
-                                                })()}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-slate-800 dark:text-white text-sm mb-0.5">{t.merchant}</div>
-                                                <div className="text-xs text-slate-400 flex items-center gap-1 font-medium">
-                                                    {t.category} 
-                                                    {t.isShared && <Users size={12} className="text-purple-500 ml-1"/>}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <span className={`font-bold text-sm ${t.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
-                                            {t.type === 'credit' ? '+' : '-'}{formatCurrency(t.amount)}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+            {activeTab === 'transactions' && renderTransactions()}
+            {activeTab === 'debts' && renderDebts()}
             {activeTab === 'goals' && renderGoals()}
-            {/* ... other tabs ... */}
+            {activeTab === 'subscriptions' && renderSubscriptions()}
+            {activeTab === 'investments' && renderInvestments()}
         </div>
+
+        {/* --- MODALS --- */}
+
+        {/* Debtor Modal */}
+        {showDebtorModal && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowDebtorModal(false)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Add Person</h3>
+                    <input autoFocus value={debtorName} onChange={(e) => setDebtorName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-4" placeholder="Name" />
+                    <button onClick={handleAddDebtor} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Save</button>
+                </div>
+            </div>
+        )}
+
+        {/* Debt Record Modal */}
+        {showDebtRecordModal && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowDebtRecordModal(null)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">New Record</h3>
+                    <p className="text-sm text-slate-500 mb-4">With {showDebtRecordModal.name}</p>
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mb-4">
+                        <button onClick={() => setDebtType('Lend')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${debtType === 'Lend' ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>I Gave</button>
+                        <button onClick={() => setDebtType('Borrow')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${debtType === 'Borrow' ? 'bg-white shadow text-slate-900' : 'text-slate-500'}`}>I Took</button>
+                    </div>
+                    <input type="number" value={debtAmountVal} onChange={(e) => setDebtAmountVal(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-2 text-2xl font-bold" placeholder="0" />
+                    <input value={debtDesc} onChange={(e) => setDebtDesc(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-4 text-sm" placeholder="Description (Optional)" />
+                    <button onClick={handleAddDebtRecord} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Save Record</button>
+                </div>
+            </div>
+        )}
+
+        {/* Subscription Modal */}
+        {showSubModal && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowSubModal(false)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">New Subscription</h3>
+                    <input value={subName} onChange={(e) => setSubName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-2" placeholder="Name (e.g. Netflix)" />
+                    <input type="number" value={subPrice} onChange={(e) => setSubPrice(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-2" placeholder="Price" />
+                    <div className="flex gap-2 mb-4">
+                        <button onClick={() => setSubPeriod('Monthly')} className={`flex-1 py-3 rounded-xl text-xs font-bold border ${subPeriod === 'Monthly' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200'}`}>Monthly</button>
+                        <button onClick={() => setSubPeriod('Yearly')} className={`flex-1 py-3 rounded-xl text-xs font-bold border ${subPeriod === 'Yearly' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200'}`}>Yearly</button>
+                    </div>
+                    <button onClick={handleAddSubscription} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Save</button>
+                </div>
+            </div>
+        )}
+
+        {/* Investment Modal */}
+        {showInvModal && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowInvModal(false)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">New Asset</h3>
+                    <input value={invName} onChange={(e) => setInvName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-2" placeholder="Asset Name" />
+                    <input type="number" value={invAmount} onChange={(e) => setInvAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-4" placeholder="Total Value Invested" />
+                    <button onClick={handleAddInvestment} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Add to Portfolio</button>
+                </div>
+            </div>
+        )}
 
         {/* Balance Adjustment Modal */}
         {adjustAccount && (
