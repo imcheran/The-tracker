@@ -64,6 +64,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   const isDarkMode = document.documentElement.classList.contains('dark');
   const childTasks = tasks.filter(t => t.parentId === task.id && !t.isDeleted);
 
+  // Combine built-in Inbox with custom lists for cycling
+  const allLists = [{ id: 'inbox', name: 'Inbox', color: '#3b82f6' }, ...lists];
+
   // --- Effects ---
 
   useEffect(() => {
@@ -159,9 +162,10 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
   };
 
   const cycleList = () => {
-      const currentIndex = lists.findIndex(l => l.id === task.listId);
-      const nextIndex = (currentIndex + 1) % lists.length;
-      handleSave({ listId: lists[nextIndex].id });
+      const currentIndex = allLists.findIndex(l => l.id === task.listId);
+      // Default to 0 (Inbox) if not found, otherwise next index
+      const nextIndex = (currentIndex === -1 ? 0 : currentIndex + 1) % allLists.length;
+      handleSave({ listId: allLists[nextIndex].id });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,12 +185,6 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
 
   const editedDateStr = task.updatedAt ? format(new Date(task.updatedAt), 'MMM d, h:mm a') : 'Just now';
   
-  // Logic to determine text color based on background
-  // If background is white (default), force text to black. If dark mode default, force white.
-  // If a specific color is chosen, try to adapt (simple logic: most keep colors are light, so dark text is safe, except for dark slate).
-  const isDefaultBg = noteTheme === 'none' && (noteColor === '#ffffff' || noteColor === '#0f172a');
-  
-  // Fix: Explicitly set text color to slate-900 if bg is light/white to prevent "white on white"
   const textColorClass = noteColor === '#ffffff' || noteColor === '#fecaca' || noteColor === '#fed7aa' || noteColor === '#fef08a' || noteColor === '#bbf7d0' || noteColor === '#bfdbfe' || noteColor === '#e9d5ff' || noteColor === '#fbcfe8' || noteColor === '#e2e8f0'
     ? 'text-slate-900 placeholder:text-slate-400' 
     : 'text-white placeholder:text-white/50';
@@ -201,6 +199,16 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
           case Priority.Medium: return 'text-amber-500';
           case Priority.Low: return 'text-blue-500';
           default: return 'text-slate-400';
+      }
+  };
+
+  // Border visual for priority
+  const getPriorityBorder = (p: Priority) => {
+      switch (p) {
+          case Priority.High: return 'border-red-500';
+          case Priority.Medium: return 'border-amber-500';
+          case Priority.Low: return 'border-blue-500';
+          default: return 'border-transparent';
       }
   };
 
@@ -221,8 +229,16 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
       return format(new Date(date), 'MMM d');
   };
 
+  // --- Date Picker Handling ---
+  // Ensuring the date update is instant and reflects globally (TaskView and CalendarView observe 'tasks')
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const dateVal = e.target.value ? new Date(e.target.value) : undefined;
+      // If setting a date, ensure duration/end date defaults if needed, but simple update is usually enough
+      handleSave({ dueDate: dateVal });
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-white dark:bg-slate-950 animate-in slide-in-from-right sm:slide-in-from-bottom sm:duration-300 duration-200" style={{ backgroundColor: noteColor }}>
+    <div className={`fixed inset-0 z-[100] flex flex-col bg-white dark:bg-slate-950 animate-in slide-in-from-right sm:slide-in-from-bottom sm:duration-300 duration-200 border-t-4 ${getPriorityBorder(task.priority)}`} style={{ backgroundColor: noteColor }}>
       <NoteBackground themeId={noteTheme} isDark={isDarkMode} />
       
       {/* Full Screen Image Preview */}
@@ -293,16 +309,16 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                       <input 
                           type="date" 
                           className="absolute inset-0 opacity-0 cursor-pointer"
-                          onChange={(e) => handleSave({ dueDate: e.target.value ? new Date(e.target.value) : undefined })}
+                          onChange={handleDateChange}
                       />
                   </div>
 
-                  {/* Priority Chip */}
+                  {/* Priority Chip - Visual feedback enhanced */}
                   <button 
                       onClick={cyclePriority}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-300/50 hover:bg-black/5 ${getPriorityColor(task.priority)} bg-transparent`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-300/50 hover:bg-black/5 ${getPriorityColor(task.priority)} ${task.priority !== Priority.None ? 'bg-white/50 shadow-sm' : 'bg-transparent'}`}
                   >
-                      <Flag size={14} fill="currentColor" />
+                      <Flag size={14} fill={task.priority !== Priority.None ? 'currentColor' : 'none'} />
                       {getPriorityLabel(task.priority)}
                   </button>
 
@@ -312,7 +328,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-300/50 hover:bg-black/5 text-slate-500 bg-transparent"
                   >
                       <Folder size={14} />
-                      {lists.find(l => l.id === task.listId)?.name || 'Inbox'}
+                      {allLists.find(l => l.id === task.listId)?.name || 'Inbox'}
                   </button>
 
                   {/* Tags Chip */}
@@ -348,13 +364,13 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                   </div>
               )}
 
-              {/* Checklist / Subtasks Section */}
-              <div className="pt-2 pl-2">
-                  <div className="space-y-2">
+              {/* Enhanced Checklist / Subtasks Section */}
+              <div className="pt-4 pl-0 md:pl-2">
+                  <div className="space-y-1">
                       {childTasks.map(child => (
                           <div 
                             key={child.id} 
-                            className="flex items-center gap-3 p-1 group relative"
+                            className="flex items-center gap-3 p-3 group relative rounded-xl hover:bg-black/5 transition-colors"
                           >
                               {/* Drag Handle */}
                               <div className="opacity-0 group-hover:opacity-30 cursor-grab active:cursor-grabbing p-1">
@@ -363,9 +379,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
 
                               <button 
                                   onClick={(e) => { e.stopPropagation(); onUpdateTask({...child, isCompleted: !child.isCompleted}); }}
-                                  className={`flex-shrink-0 transition-colors ${child.isCompleted ? 'text-blue-500' : 'text-slate-400 hover:text-slate-500'}`}
+                                  className={`flex-shrink-0 transition-all duration-300 transform ${child.isCompleted ? 'text-blue-500 scale-110' : 'text-slate-400 hover:text-slate-500 hover:scale-105'}`}
                               >
-                                  {child.isCompleted ? <CheckCircle2 size={18} className="fill-current" /> : <Circle size={18} />}
+                                  {child.isCompleted ? <CheckCircle2 size={20} className="fill-current" /> : <Circle size={20} />}
                               </button>
                               
                               <input
@@ -374,15 +390,23 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({
                                   onChange={(e) => handleUpdateChildTitle(child.id, e.target.value)}
                                   onKeyDown={(e) => handleChildKeyDown(e, child.id)}
                                   placeholder="List item..."
-                                  className={`flex-1 bg-transparent border-none outline-none text-sm font-medium ${child.isCompleted ? 'line-through text-slate-400' : textColorClass}`}
+                                  className={`flex-1 bg-transparent border-none outline-none text-sm font-medium transition-all duration-300 ${child.isCompleted ? 'line-through text-slate-400 opacity-60' : textColorClass}`}
                               />
 
-                              <button onClick={() => onDeleteTask(child.id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-opacity">
-                                  <X size={14} />
+                              <button onClick={() => onDeleteTask(child.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-opacity">
+                                  <X size={16} />
                               </button>
                           </div>
                       ))}
                   </div>
+                  {/* Add Item Button */}
+                  <button 
+                    onClick={handleAddChecklistItem} 
+                    className="flex items-center gap-3 px-4 py-3 mt-2 text-slate-500 hover:text-blue-600 transition-colors w-full text-left font-medium text-sm group"
+                  >
+                      <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
+                      Add item
+                  </button>
               </div>
           </div>
       </div>

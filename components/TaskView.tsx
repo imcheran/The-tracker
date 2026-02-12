@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Task, Priority, ViewType, List, AppSettings, Habit } from '../types';
 import { 
   CheckCircle2, Plus, Inbox, Search, Layers, Archive, Sun, CalendarDays, Trash2, Menu,
@@ -32,6 +32,76 @@ interface TaskViewProps {
   onUpdateHabit?: (habit: Habit) => void;
   user?: any;
 }
+
+// --- Swipeable Wrapper ---
+const SwipeableWrapper: React.FC<{
+  children: React.ReactNode;
+  onTriggerLeft: () => void; // e.g. Calendar/Schedule
+  onTriggerRight: () => void; // e.g. Complete/Archive
+  enabled: boolean;
+}> = ({ children, onTriggerLeft, onTriggerRight, enabled }) => {
+  const [offset, setOffset] = useState(0);
+  const startX = useRef(0);
+  const isDragging = useRef(false);
+
+  if (!enabled) return <>{children}</>;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    isDragging.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - startX.current;
+    // Limit swipe distance for visual resistance
+    if (Math.abs(diff) < 150) {
+        setOffset(diff);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    isDragging.current = false;
+    if (offset > 80) { // Swipe Right -> Complete
+        onTriggerRight();
+    } else if (offset < -80) { // Swipe Left -> Schedule
+        onTriggerLeft();
+    }
+    setOffset(0);
+  };
+
+  const opacity = Math.min(Math.abs(offset) / 80, 1);
+
+  return (
+    <div className="relative overflow-hidden rounded-[24px]">
+      {/* Background Actions */}
+      <div className={`absolute inset-0 flex items-center justify-between px-6 text-white transition-colors ${offset > 0 ? 'bg-blue-500' : 'bg-orange-500'}`}>
+         {/* Right Swipe Content (shown on left side when swiping right) */}
+         <div style={{ opacity: offset > 0 ? opacity : 0 }} className="font-bold flex items-center gap-2 transform transition-transform">
+             <CheckCircle2 size={24} /> 
+             <span className="text-sm uppercase tracking-wider">Complete</span>
+         </div>
+         
+         {/* Left Swipe Content (shown on right side when swiping left) */}
+         <div style={{ opacity: offset < 0 ? opacity : 0 }} className="font-bold flex items-center gap-2 transform transition-transform">
+             <span className="text-sm uppercase tracking-wider">Schedule</span>
+             <Calendar size={24} />
+         </div>
+      </div>
+
+      <div 
+        className="relative transition-transform duration-200 ease-out bg-white dark:bg-slate-950"
+        style={{ transform: `translateX(${offset}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
 
 // --- Bento Task Card Component ---
 interface BentoTaskCardProps {
@@ -226,8 +296,6 @@ const TaskView: React.FC<TaskViewProps> = ({
   const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
   const isSelectionMode = selectedNoteIds.size > 0;
   
-  // Move Task State
-  const [taskToMove, setTaskToMove] = useState<string | null>(null);
   // Date Edit State
   const [taskToEditDate, setTaskToEditDate] = useState<Task | undefined>(undefined);
 
@@ -333,6 +401,10 @@ const TaskView: React.FC<TaskViewProps> = ({
           default: return task.listId === viewType && !task.isCompleted;
       }
   }).sort((a, b) => {
+      if (viewType === ViewType.Completed) {
+          // Sort by recently updated/completed (descending)
+          return (new Date(b.updatedAt || 0).getTime()) - (new Date(a.updatedAt || 0).getTime());
+      }
       if (isNotesView) {
           if (a.isPinned && !b.isPinned) return -1;
           if (!a.isPinned && b.isPinned) return 1;
@@ -358,8 +430,6 @@ const TaskView: React.FC<TaskViewProps> = ({
           default: return lists.find(l => l.id === viewType)?.name || 'Tasks';
       }
   };
-
-  const currentList = lists.find(l => l.id === viewType);
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors">
@@ -443,14 +513,20 @@ const TaskView: React.FC<TaskViewProps> = ({
                     // Responsive Grid for Tasks (Bento Style)
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
                         {filteredTasks.map(task => (
-                            <BentoTaskCard 
+                            <SwipeableWrapper
                                 key={task.id}
-                                task={task}
-                                isSimplified={isSimplifiedView}
-                                onToggle={() => onToggleTask(task.id)}
-                                onSelect={() => onSelectTask(task.id)}
-                                onDelete={() => onDeleteTask?.(task.id)}
-                            />
+                                enabled={!task.isEvent} // Disable for calendar events
+                                onTriggerRight={() => onToggleTask(task.id)}
+                                onTriggerLeft={() => setTaskToEditDate(task)}
+                            >
+                                <BentoTaskCard 
+                                    task={task}
+                                    isSimplified={isSimplifiedView}
+                                    onToggle={() => onToggleTask(task.id)}
+                                    onSelect={() => onSelectTask(task.id)}
+                                    onDelete={() => onDeleteTask?.(task.id)}
+                                />
+                            </SwipeableWrapper>
                         ))}
                     </div>
                 )

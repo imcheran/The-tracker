@@ -11,19 +11,17 @@ import {
   Calendar, RotateCw, Play, Pause, ExternalLink, BarChart3, Clock, Download, FileText, Smartphone, Monitor, ShoppingCart, Coffee,
   Heart, Users2, Split, BarChart2, Eye, Activity, Percent, ChevronDown, Coins, Calculator, Delete, MoreHorizontal,
   ArrowRightLeft,
-  CalendarDays
+  CalendarDays,
+  PieChart as PieIcon
 } from 'lucide-react';
 import { 
   format, isWithinInterval, isToday, eachDayOfInterval, 
   getDay, addMonths, isSameDay, addDays, isThisMonth, addYears, isBefore, differenceInDays, isYesterday,
   subMonths, startOfMonth, endOfMonth, parseISO, startOfYear
 } from 'date-fns';
-import { getFinancialInsights } from '../services/aiService';
 import { loadFromStorage, saveToStorage } from '../services/storageService';
-import { readRecentSms, parseBankingSms } from '../services/smsService';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend, AreaChart, Area } from 'recharts';
-import { Capacitor } from '@capacitor/core';
-import { CURRENCIES, DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from '../data/financeData';
+import { CURRENCIES, DEFAULT_CATEGORIES } from '../data/financeData';
 
 interface FinanceViewProps {
   transactions: Transaction[];
@@ -64,6 +62,7 @@ const ICON_MAP: Record<string, any> = {
   'shopping-cart': ShoppingCart, 'coffee': Coffee
 };
 
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 const GOAL_ICONS = ['target', 'piggy-bank', 'plane', 'car', 'home', 'briefcase', 'gift'];
 const GOAL_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -72,18 +71,6 @@ const normalizeCategory = (catName: string) => {
     if (catName === 'Health') return 'Healthcare';
     if (catName === 'Bills') return 'Utilities';
     return catName;
-};
-
-const getNextRenewal = (start: string | Date, period: 'Monthly' | 'Yearly') => {
-    const now = new Date();
-    let next = new Date(start);
-    let loops = 0;
-    while (next < now && loops < 1000) {
-        if (period === 'Monthly') next = addMonths(next, 1);
-        else next = addYears(next, 1);
-        loops++;
-    }
-    return next;
 };
 
 const AccountCard = ({ name, type, amount, currency, onEdit }: any) => {
@@ -114,13 +101,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({
     investments = [], onAddInvestment, onUpdateInvestment, onDeleteInvestment,
     user, partnerTransactions = []
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'debts' | 'goals' | 'subscriptions' | 'investments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'assets' | 'subscriptions' | 'investments'>('overview');
   const [showInput, setShowInput] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
-  // Calculator State
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [calcDisplay, setCalcDisplay] = useState('0');
   
   // Workspace Toggle: 'personal' or 'joint'
   const [workspaceMode, setWorkspaceMode] = useState<'personal' | 'joint'>('personal');
@@ -132,7 +115,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   const [excludeCategories, setExcludeCategories] = useState<string[]>([]);
 
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
@@ -290,15 +272,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({
   const stats = useMemo(() => {
       let income = 0;
       let expense = 0;
-      // Use original list for accurate stats, applying ONLY the excludes to filter out non-spending
-      // But keep month filter
       const start = startOfMonth(currentMonth);
       const end = endOfMonth(currentMonth);
       const periodTxns = allTransactionsSorted.filter(t => t.date && isWithinInterval(parseISO(t.date), { start, end }));
 
       periodTxns.forEach(t => {
           if (t.exclude_from_budget) return;
-          // Apply excludeCategories logic to stats if user wants to filter them out of view
           if (excludeCategories.includes(t.category)) return;
 
           if (t.type === 'credit') income += t.amount;
@@ -307,6 +286,22 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       
       return { income, expense, balance: income - expense };
   }, [allTransactionsSorted, currentMonth, excludeCategories]);
+
+  const categoryAnalysis = useMemo(() => {
+      const data: Record<string, number> = {};
+      const start = startOfMonth(currentMonth);
+      const end = endOfMonth(currentMonth);
+      
+      allTransactionsSorted.forEach(t => {
+          if (t.type === 'debit' && !t.exclude_from_budget && isWithinInterval(parseISO(t.date), { start, end })) {
+              data[t.category] = (data[t.category] || 0) + t.amount;
+          }
+      });
+      
+      return Object.entries(data)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+  }, [allTransactionsSorted, currentMonth]);
 
   const accountBalances = useMemo(() => {
       const acc = { cash: 0, bank: 0, credit: 0 };
@@ -475,7 +470,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           updatedAt: new Date()
       });
 
-      // Optional: Add Transaction
       onAddTransaction({
           id: Date.now().toString(),
           is_transaction: true,
@@ -519,7 +513,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       onAddInvestment({
           id: editingInvestment ? editingInvestment.id : Date.now().toString(),
           name: invName,
-          units: 1, // Simplified for now
+          units: 1, 
           avgPrice: parseFloat(invAmount),
           type: invType,
           date: format(new Date(), 'yyyy-MM-dd'),
@@ -527,7 +521,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           updatedAt: new Date()
       });
       
-      // Track as expense
       onAddTransaction({
           id: Date.now().toString(),
           is_transaction: true,
@@ -606,6 +599,49 @@ const FinanceView: React.FC<FinanceViewProps> = ({
               </div>
           </div>
 
+          <div className="bg-white dark:bg-slate-900 rounded-[28px] p-5 shadow-sm border border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><PieIcon size={18}/> Spend Analysis</h3>
+              <div className="h-60 w-full relative">
+                  {categoryAnalysis.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                              <Pie
+                                  data={categoryAnalysis}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={60}
+                                  outerRadius={80}
+                                  paddingAngle={5}
+                                  dataKey="value"
+                              >
+                                  {categoryAnalysis.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                  ))}
+                              </Pie>
+                              <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderRadius: '12px', border: 'none', color: '#fff' }} itemStyle={{ color: '#fff' }} formatter={(value: number) => formatCurrency(value)} />
+                          </PieChart>
+                      </ResponsiveContainer>
+                  ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">No expenses yet</div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="text-center">
+                          <div className="text-xs text-slate-400 uppercase font-bold">Total</div>
+                          <div className="text-lg font-black text-slate-800 dark:text-white">{formatCurrency(stats.expense)}</div>
+                      </div>
+                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                  {categoryAnalysis.slice(0, 4).map((cat, i) => (
+                      <div key={cat.name} className="flex items-center gap-2 text-xs">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                          <span className="text-slate-600 dark:text-slate-300 truncate flex-1">{cat.name}</span>
+                          <span className="font-bold text-slate-800 dark:text-white">{Math.round((cat.value / stats.expense) * 100)}%</span>
+                      </div>
+                  ))}
+              </div>
+          </div>
+
           <div>
               <h3 className="font-bold text-slate-800 dark:text-white mb-3 px-1">Accounts</h3>
               <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
@@ -619,7 +655,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
   const renderTransactions = () => (
       <div className="p-4 space-y-4 pb-24 h-full flex flex-col">
-          {/* Filters */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
               <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-lg border transition-colors ${showFilters ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-slate-200 text-slate-500'}`}>
                   <Filter size={18} />
@@ -697,15 +732,68 @@ const FinanceView: React.FC<FinanceViewProps> = ({
       </div>
   );
 
-  const renderDebts = () => {
+  const renderAssets = () => {
       const totalLent = debts.filter(d => d.type === 'Lend').reduce((sum, d) => sum + d.amount, 0);
       const totalBorrowed = debts.filter(d => d.type === 'Borrow').reduce((sum, d) => sum + d.amount, 0);
       const net = totalLent - totalBorrowed;
 
       return (
           <div className="p-4 space-y-6 pb-24">
+              {/* Savings Goals Section */}
+              <div>
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-white">Savings Goals</h3>
+                      <button onClick={() => { setEditingGoal(null); setShowGoalModal(true); }} className="p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-colors">
+                          <Plus size={20}/>
+                      </button>
+                  </div>
+                  <div className="space-y-4">
+                      {goals.map(goal => {
+                          const progress = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
+                          return (
+                              <div key={goal.id} className="bg-white dark:bg-slate-900 p-5 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                                  <div className="flex justify-between items-start mb-4">
+                                      <div className="flex items-center gap-3">
+                                          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md text-xl" style={{ backgroundColor: goal.color }}>
+                                              <Target size={24} />
+                                          </div>
+                                          <div>
+                                              <div className="font-bold text-slate-800 dark:text-white text-lg">{goal.name}</div>
+                                              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Target: {formatCurrency(goal.targetAmount)}</div>
+                                          </div>
+                                      </div>
+                                      <div className="flex gap-1">
+                                          <button onClick={() => { setEditingGoal(goal); setShowGoalModal(true); }} className="p-2 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200">
+                                              <Edit2 size={18} />
+                                          </button>
+                                          <button onClick={() => onDeleteGoal && onDeleteGoal(goal.id)} className="p-2 text-slate-300 hover:text-red-500">
+                                              <Trash2 size={18} />
+                                          </button>
+                                      </div>
+                                  </div>
+                                  
+                                  <div className="flex items-end justify-between mb-2">
+                                      <span className="text-2xl font-black text-slate-900 dark:text-white">{formatCurrency(goal.currentAmount)}</span>
+                                      <span className="text-sm font-bold text-slate-400 mb-1">{progress}%</span>
+                                  </div>
+
+                                  <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
+                                      <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${progress}%`, backgroundColor: goal.color }} />
+                                  </div>
+
+                                  <button onClick={() => setShowGoalDeposit({ id: goal.id, name: goal.name })} className="w-full py-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                      <Plus size={16} /> Add Money
+                                  </button>
+                              </div>
+                          );
+                      })}
+                      {goals.length === 0 && <div className="text-center py-6 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">Create a goal to save!</div>}
+                  </div>
+              </div>
+
+              {/* Debts Section */}
               <div className="bg-slate-900 text-white p-6 rounded-[28px] shadow-lg">
-                  <div className="text-xs font-bold text-slate-400 uppercase mb-1">Net Position</div>
+                  <div className="text-xs font-bold text-slate-400 uppercase mb-1">Debt Net Position</div>
                   <div className={`text-3xl font-black mb-6 ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{net >= 0 ? '+' : ''}{formatCurrency(net)}</div>
                   <div className="flex gap-4">
                       <div className="flex-1 bg-white/10 rounded-xl p-3">
@@ -721,7 +809,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
               <div>
                   <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-slate-800 dark:text-white">People</h3>
+                      <h3 className="font-bold text-slate-800 dark:text-white">Debtors</h3>
                       <button onClick={() => setShowDebtorModal(true)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"><Plus size={18}/></button>
                   </div>
                   <div className="space-y-3">
@@ -739,15 +827,22 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                                           <div className="text-xs text-slate-500">{debtorDebts.length} records</div>
                                       </div>
                                   </div>
-                                  <div className="text-right">
-                                      <div className={`font-bold ${balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                          {balance > 0 ? 'Owes you' : balance < 0 ? 'You owe' : 'Settled'}
+                                  <div className="flex items-center gap-3">
+                                      <div className="text-right">
+                                          <div className={`font-bold ${balance > 0 ? 'text-emerald-600' : balance < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                              {balance > 0 ? 'Owes you' : balance < 0 ? 'You owe' : 'Settled'}
+                                          </div>
+                                          <div className="text-sm font-black text-slate-800 dark:text-white">{formatCurrency(Math.abs(balance))}</div>
                                       </div>
-                                      <div className="text-sm font-black text-slate-800 dark:text-white">{formatCurrency(Math.abs(balance))}</div>
+                                      <div className="flex gap-1">
+                                          <button onClick={() => setShowDebtRecordModal({ debtorId: debtor.id, name: debtor.name })} className="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg">
+                                              <Plus size={18}/>
+                                          </button>
+                                          <button onClick={() => onDeleteDebtor && onDeleteDebtor(debtor.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                                              <Trash2 size={18}/>
+                                          </button>
+                                      </div>
                                   </div>
-                                  <button onClick={() => setShowDebtRecordModal({ debtorId: debtor.id, name: debtor.name })} className="ml-2 p-2 text-slate-400 hover:bg-slate-50 rounded-lg">
-                                      <Plus size={18}/>
-                                  </button>
                               </div>
                           )
                       })}
@@ -757,62 +852,6 @@ const FinanceView: React.FC<FinanceViewProps> = ({
           </div>
       );
   };
-
-  const renderGoals = () => (
-      <div className="p-4 space-y-4 pb-24">
-          <div className="flex justify-between items-center mb-2 px-1">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Savings Goals</h3>
-              <button onClick={() => { setEditingGoal(null); setShowGoalModal(true); }} className="p-2 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-colors">
-                  <Plus size={20}/>
-              </button>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-              {goals.map(goal => {
-                  const progress = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
-                  return (
-                      <div key={goal.id} className="bg-white dark:bg-slate-900 p-5 rounded-[24px] border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden">
-                          <div className="flex justify-between items-start mb-4">
-                              <div className="flex items-center gap-3">
-                                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md text-xl" style={{ backgroundColor: goal.color }}>
-                                      <Target size={24} />
-                                  </div>
-                                  <div>
-                                      <div className="font-bold text-slate-800 dark:text-white text-lg">{goal.name}</div>
-                                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">Target: {formatCurrency(goal.targetAmount)}</div>
-                                  </div>
-                              </div>
-                              <button onClick={() => { setEditingGoal(goal); setShowGoalModal(true); }} className="p-2 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200">
-                                  <Edit2 size={18} />
-                              </button>
-                          </div>
-                          
-                          <div className="flex items-end justify-between mb-2">
-                              <span className="text-2xl font-black text-slate-900 dark:text-white">{formatCurrency(goal.currentAmount)}</span>
-                              <span className="text-sm font-bold text-slate-400 mb-1">{progress}%</span>
-                          </div>
-
-                          <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
-                              <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${progress}%`, backgroundColor: goal.color }} />
-                          </div>
-
-                          <button 
-                              onClick={() => setShowGoalDeposit({ id: goal.id, name: goal.name })}
-                              className="w-full py-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                          >
-                              <Plus size={16} /> Add Money
-                          </button>
-                      </div>
-                  );
-              })}
-              {goals.length === 0 && (
-                  <div className="text-center py-10 text-slate-400">
-                      <PiggyBank size={48} className="mx-auto mb-2 opacity-50"/>
-                      <p>No goals yet. Create one!</p>
-                  </div>
-              )}
-          </div>
-      </div>
-  );
 
   const renderSubscriptions = () => {
       const monthlyTotal = subscriptions.reduce((acc, s) => acc + (s.period === 'Monthly' ? s.price : s.price / 12), 0);
@@ -835,7 +874,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                   </div>
                   <div className="grid grid-cols-1 gap-3">
                       {subscriptions.map(sub => (
-                          <div key={sub.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                          <div key={sub.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
                               <div className="flex items-center gap-4">
                                   <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 font-bold text-xl">
                                       {sub.name[0]}
@@ -845,10 +884,13 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                                       <div className="text-xs text-slate-500">{sub.period} • {formatCurrency(sub.price)}</div>
                                   </div>
                               </div>
-                              <div className="text-right">
+                              <div className="flex items-center gap-3">
                                   <div className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 px-2 py-1 rounded-lg">
                                       {format(new Date(sub.startDate), 'MMM d')}
                                   </div>
+                                  <button onClick={() => onDeleteSubscription && onDeleteSubscription(sub.id)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Trash2 size={18}/>
+                                  </button>
                               </div>
                           </div>
                       ))}
@@ -878,14 +920,19 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                   </div>
                   <div className="space-y-3">
                       {investments.map(inv => (
-                          <div key={inv.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                          <div key={inv.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
                               <div>
                                   <div className="font-bold text-slate-900 dark:text-white">{inv.name}</div>
                                   <div className="text-xs text-slate-500">{inv.type} • {inv.units} units</div>
                               </div>
-                              <div className="text-right">
-                                  <div className="font-bold text-slate-900 dark:text-white">{formatCurrency(inv.units * inv.avgPrice)}</div>
-                                  <div className="text-[10px] text-emerald-500 font-bold">+0.0%</div>
+                              <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                      <div className="font-bold text-slate-900 dark:text-white">{formatCurrency(inv.units * inv.avgPrice)}</div>
+                                      <div className="text-[10px] text-emerald-500 font-bold">+0.0%</div>
+                                  </div>
+                                  <button onClick={() => onDeleteInvestment && onDeleteInvestment(inv.id)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Trash2 size={18}/>
+                                  </button>
                               </div>
                           </div>
                       ))}
@@ -917,7 +964,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
             
             {/* Tabs */}
             <div className="px-4 pb-3 overflow-x-auto no-scrollbar flex gap-2">
-                {(['overview', 'transactions', 'debts', 'goals', 'subscriptions', 'investments'] as const).map(tab => (
+                {(['overview', 'transactions', 'assets', 'subscriptions', 'investments'] as const).map(tab => (
                     <button 
                         key={tab} 
                         onClick={() => setActiveTab(tab)} 
@@ -932,8 +979,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
             {activeTab === 'overview' && renderOverview()}
             {activeTab === 'transactions' && renderTransactions()}
-            {activeTab === 'debts' && renderDebts()}
-            {activeTab === 'goals' && renderGoals()}
+            {activeTab === 'assets' && renderAssets()}
             {activeTab === 'subscriptions' && renderSubscriptions()}
             {activeTab === 'investments' && renderInvestments()}
         </div>
