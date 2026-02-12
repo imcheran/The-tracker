@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { 
   Inbox, Calendar, Target, Clock, Layers, Tags, 
   Settings, Plus, Search, Zap, Notebook, Wallet, Sun, CalendarDays, Trash2, X, User, Cloud, CloudOff, Loader2, Check,
-  ListTodo
+  ListTodo, CheckSquare
 } from 'lucide-react';
 import { ViewType } from '../types';
 
@@ -110,17 +110,11 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
         <div className="flex flex-col h-full px-4 pt-safe">
             {/* Header / Branding */}
             <div className="py-6 flex items-center justify-between px-2">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                        <Zap size={20} fill="currentColor" />
+                <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-600/20">
+                        <CheckSquare size={24} strokeWidth={2.5} />
                     </div>
-                    <div className="flex flex-col justify-center">
-                        <span className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Tracker</span>
-                        <div className="flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full ${syncStatus === 'saved' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">{syncStatus === 'saving' ? 'Syncing...' : 'Ready'}</span>
-                        </div>
-                    </div>
+                    <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Tracker</span>
                 </div>
                 
                 <button 
