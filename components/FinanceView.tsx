@@ -986,6 +986,109 @@ const FinanceView: React.FC<FinanceViewProps> = ({
 
         {/* --- MODALS --- */}
 
+        {/* Transaction Input Modal */}
+        {showInput && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in" onClick={() => setShowInput(false)}>
+                <div className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white">{editingTransaction ? 'Edit Transaction' : 'New Transaction'}</h3>
+                        <button onClick={() => setShowInput(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"><X size={20}/></button>
+                    </div>
+
+                    <div className="space-y-5">
+                        {/* Type Toggle */}
+                        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+                            <button onClick={() => setType('debit')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${type === 'debit' ? 'bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 shadow-sm' : 'text-slate-500'}`}>Expense</button>
+                            <button onClick={() => setType('credit')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${type === 'credit' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500'}`}>Income</button>
+                        </div>
+
+                        {/* Amount & Merchant */}
+                        <div className="space-y-3">
+                            <div className="relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">{currency.symbol}</span>
+                                <input 
+                                    type="number" 
+                                    value={amount} 
+                                    onChange={(e) => setAmount(e.target.value)} 
+                                    placeholder="0.00" 
+                                    className="w-full bg-slate-50 dark:bg-slate-800 pl-10 pr-4 py-4 rounded-2xl outline-none text-2xl font-black text-slate-900 dark:text-white placeholder-slate-300 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                                    autoFocus 
+                                />
+                            </div>
+                            
+                            <div className="relative">
+                                <input 
+                                    value={merchant} 
+                                    onChange={(e) => setMerchant(e.target.value)} 
+                                    placeholder="Merchant / Title" 
+                                    className="w-full bg-slate-50 dark:bg-slate-800 px-4 py-4 rounded-2xl outline-none font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all" 
+                                />
+                                {merchantSuggestions.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-10 overflow-hidden">
+                                        {merchantSuggestions.map((m, i) => (
+                                            <div key={i} onClick={() => { setMerchant(m); setMerchantSuggestions([]); }} className="px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-50 dark:border-slate-700 last:border-0">{m}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Category Grid */}
+                        <div>
+                            <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-2 block">Category</label>
+                            <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                {DEFAULT_CATEGORIES.map(cat => {
+                                    const IconComp = ICON_MAP[cat.icon] || CircleDot;
+                                    const isSelected = category === cat.name;
+                                    return (
+                                        <button 
+                                            key={cat.name} 
+                                            onClick={() => setCategory(cat.name)}
+                                            className={`flex flex-col items-center justify-center p-2 rounded-xl gap-1 transition-all ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 ring-2 ring-indigo-500 ring-inset' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                        >
+                                            <IconComp size={20} />
+                                            <span className="text-[9px] font-bold truncate w-full">{cat.name}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Details Row */}
+                        <div className="flex gap-3">
+                            <input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl outline-none font-bold text-sm text-slate-700 dark:text-slate-200" />
+                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl outline-none font-bold text-sm text-slate-700 dark:text-slate-200 appearance-none">
+                                <option>Cash</option>
+                                <option>Card</option>
+                                <option>Bank</option>
+                                <option>UPI</option>
+                            </select>
+                        </div>
+
+                        {/* Joint Toggle */}
+                        {workspaceMode === 'joint' && (
+                            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl cursor-pointer" onClick={() => setIsSharedTransaction(!isSharedTransaction)}>
+                                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${isSharedTransaction ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-400'}`}>
+                                    {isSharedTransaction && <Check size={14} strokeWidth={3} />}
+                                </div>
+                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Shared Expense</span>
+                            </div>
+                        )}
+
+                        <button onClick={handleManualSubmit} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95 text-lg">
+                            {editingTransaction ? 'Update Transaction' : 'Save Transaction'}
+                        </button>
+                        
+                        {editingTransaction && (
+                            <button onClick={() => { onDeleteTransaction(editingTransaction.id); setShowInput(false); }} className="w-full py-3 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition-colors">
+                                Delete Transaction
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+
         {/* Debtor Modal */}
         {showDebtorModal && (
             <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowDebtorModal(false)}>
@@ -1010,6 +1113,38 @@ const FinanceView: React.FC<FinanceViewProps> = ({
                     <input type="number" value={debtAmountVal} onChange={(e) => setDebtAmountVal(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-2 text-2xl font-bold" placeholder="0" />
                     <input value={debtDesc} onChange={(e) => setDebtDesc(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-4 text-sm" placeholder="Description (Optional)" />
                     <button onClick={handleAddDebtRecord} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Save Record</button>
+                </div>
+            </div>
+        )}
+
+        {/* Goal Modal */}
+        {showGoalModal && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowGoalModal(false)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Savings Goal</h3>
+                    <input value={goalName} onChange={(e) => setGoalName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-2" placeholder="Goal Name" />
+                    <input type="number" value={goalTarget} onChange={(e) => setGoalTarget(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-2" placeholder="Target Amount" />
+                    <input type="number" value={goalCurrent} onChange={(e) => setGoalCurrent(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-4" placeholder="Current Amount" />
+                    
+                    <div className="grid grid-cols-6 gap-2 mb-4">
+                        {GOAL_COLORS.map(c => (
+                            <button key={c} onClick={() => setGoalColor(c)} className={`w-8 h-8 rounded-full ${goalColor === c ? 'ring-2 ring-offset-2 ring-indigo-500' : ''}`} style={{ backgroundColor: c }} />
+                        ))}
+                    </div>
+
+                    <button onClick={handleSaveGoal} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Save Goal</button>
+                </div>
+            </div>
+        )}
+
+        {/* Goal Deposit Modal */}
+        {showGoalDeposit && (
+            <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowGoalDeposit(null)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Add Money</h3>
+                    <p className="text-sm text-slate-500 mb-4">To {showGoalDeposit.name}</p>
+                    <input type="number" autoFocus value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-xl outline-none mb-4 text-2xl font-bold" placeholder="0" />
+                    <button onClick={handleDeposit} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl">Deposit</button>
                 </div>
             </div>
         )}
