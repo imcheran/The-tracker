@@ -28,6 +28,10 @@ import type { Firestore } from "firebase/firestore";
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 
+// CRITICAL: Side-effect imports to register 'auth' and 'firestore' components with the Firebase App
+import "firebase/auth";
+import "firebase/firestore";
+
 const firebaseConfig = {
   apiKey: "AIzaSyBliJyouiIZ0opeozDFvjUkcFBzVruOBzI",
   authDomain: "tracker-8fefe.firebaseapp.com",
@@ -48,17 +52,22 @@ let analytics: Analytics | undefined;
 const initializeFirebase = () => {
   try {
     // 1. Initialize App (Modular & Idempotent)
-    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
     // 2. Initialize Auth
     try {
+        // Pass app instance explicitly to getAuth to avoid "default app not found" or registration issues
         auth = getAuth(app);
-        setPersistence(auth, browserLocalPersistence).catch(e =>
-          console.warn("Auth Persistence Warning:", e)
-        );
+        
+        // Set persistence only if we have a valid auth instance
+        if (auth) {
+            setPersistence(auth, browserLocalPersistence).catch(e =>
+              console.warn("Auth Persistence Warning:", e)
+            );
+        }
     } catch (authError) {
         console.error("Critical Auth Initialization Error:", authError);
-        throw authError;
+        // We don't throw here to allow the app to function in offline/no-auth mode if needed
     }
 
     // 3. Initialize Firestore
@@ -73,7 +82,11 @@ const initializeFirebase = () => {
 
     // 4. Initialize Analytics (Client-side only)
     if (typeof window !== 'undefined') {
-      getAnalytics(app);
+      try {
+        analytics = getAnalytics(app);
+      } catch (e) {
+        console.warn("Analytics failed to initialize", e);
+      }
     }
 
     // 5. Initialize Capacitor Google Auth (Native Only)
