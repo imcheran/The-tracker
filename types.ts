@@ -162,6 +162,9 @@ export interface Transaction {
   // Couples Finance Features
   isShared?: boolean; 
   paidBy?: string; // UID of the user who paid
+
+  // Split Expense Feature
+  personalShare?: number; // The amount that actually counts as expense, if different from total amount
 }
 
 export interface Debtor {
