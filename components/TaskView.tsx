@@ -194,12 +194,13 @@ const BentoTaskCard: React.FC<BentoTaskCardProps> = ({ task, onToggle, onSelect,
 // --- Note Item Component (Bento Style) ---
 interface NoteItemProps { 
     note: Task; 
+    childTasks: Task[];
     onClick: () => void; 
     onLongPress: () => void;
     isSelected: boolean;
 }
 
-const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelected }) => {
+const NoteItem: React.FC<NoteItemProps> = ({ note, childTasks, onClick, onLongPress, isSelected }) => {
     const imageAttachment = note.attachments?.find(a => a.type === 'image' || a.type === 'drawing');
     const isDark = document.documentElement.classList.contains('dark');
     const timerRef = useRef<any>(null);
@@ -217,6 +218,12 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
             timerRef.current = null;
         }
     };
+
+    // Subtask Logic
+    const incompleteSubtasks = childTasks.filter(t => !t.isCompleted);
+    const completedSubtasks = childTasks.filter(t => t.isCompleted);
+    const displaySubtasks = childTasks.slice(0, 4);
+    const remainingCount = Math.max(0, childTasks.length - 4);
 
     return (
         <div 
@@ -266,6 +273,29 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onClick, onLongPress, isSelec
                         className={`text-sm line-clamp-6 whitespace-pre-wrap ${hasCustomBg ? 'text-slate-800/80 dark:text-slate-900/80' : 'text-slate-600 dark:text-slate-400'}`}
                         dangerouslySetInnerHTML={{ __html: note.description }}
                     />
+                )}
+
+                {/* Checklist Preview */}
+                {displaySubtasks.length > 0 && (
+                    <div className={`mt-2 space-y-1 ${note.description ? 'pt-2 border-t border-black/5 dark:border-white/5' : ''}`}>
+                        {displaySubtasks.map(sub => (
+                            <div key={sub.id} className="flex items-center gap-2">
+                                {sub.isCompleted ? (
+                                    <CheckCircle2 size={14} className={`${hasCustomBg ? 'text-slate-600' : 'text-slate-400'}`} />
+                                ) : (
+                                    <Circle size={14} className={`${hasCustomBg ? 'text-slate-600' : 'text-slate-400'}`} />
+                                )}
+                                <span className={`text-xs truncate ${sub.isCompleted ? 'line-through opacity-60' : ''} ${hasCustomBg ? 'text-slate-800' : 'text-slate-600 dark:text-slate-300'}`}>
+                                    {sub.title}
+                                </span>
+                            </div>
+                        ))}
+                        {remainingCount > 0 && (
+                            <div className={`text-[10px] font-medium pl-6 ${hasCustomBg ? 'text-slate-600' : 'text-slate-400'}`}>
+                                + {remainingCount} more items
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {/* Footer: Tags & Date */}
@@ -371,13 +401,17 @@ const TaskView: React.FC<TaskViewProps> = ({
       const today = startOfDay(new Date());
       
       if (isNotesView) {
-          return task.isNote === true;
+          // Hide checklist items (subtasks) from main grid
+          return task.isNote === true && !task.parentId;
       }
 
       if (task.isNote && viewType !== ViewType.All && viewType !== ViewType.Trash && viewType !== ViewType.Search && viewType !== ViewType.Tags) {
           return false;
       }
       
+      // For standard task views, also hide subtasks
+      if (task.parentId) return false;
+
       switch (viewType) {
           case ViewType.Inbox: return task.listId === 'inbox' && !task.isCompleted && !task.isEvent;
           case ViewType.Today: 
@@ -503,6 +537,7 @@ const TaskView: React.FC<TaskViewProps> = ({
                             <NoteItem 
                                 key={note.id} 
                                 note={note} 
+                                childTasks={tasks.filter(t => t.parentId === note.id && !t.isDeleted)}
                                 onClick={() => handleNoteClick(note.id)} 
                                 onLongPress={() => handleLongPressNote(note.id)}
                                 isSelected={selectedNoteIds.has(note.id)}
